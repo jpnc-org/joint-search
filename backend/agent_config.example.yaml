@@ -1,0 +1,7 @@
+agent_a:
+  agent_id: "<your-agent-uuid>"
+  api_key: "<your-api-key>"
+
+agent_b:
+  agent_id: "<your-agent-uuid>"
+  api_key: "<your-api-key>"
