@@ -37,6 +37,8 @@ If a quality gate cannot be run because the command or dependency is unavailable
 ## References
 
 - The [thenvoi/codeband](https://github.com/thenvoi/codeband) repository may be used as a reference when relevant.
+- The [AIML API documentation](https://docs.aimlapi.com/) may be used as a reference for model providers and AI/ML API behavior.
+- The [Band.ai documentation](https://docs.band.ai/welcome) may be used as a reference for agent management concepts.
 
 ## Project Context
 
