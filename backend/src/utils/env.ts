@@ -25,6 +25,5 @@ export const env = {
   S3_REGION: required('S3_REGION'),
   MAX_FILE_SIZE: parseInt(required('MAX_FILE_SIZE'), 10),
   PORT: parseInt(required('PORT'), 10),
-  CORS_ORIGIN: required('CORS_ORIGIN'),
   NODE_ENV: required('NODE_ENV'),
 };

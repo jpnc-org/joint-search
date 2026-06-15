@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import express from 'express';
-import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { env } from './utils/env';
 import { initializeDatabase } from './utils/database';
@@ -20,14 +19,10 @@ async function main() {
 
   const app = express();
 
-  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json());
   app.use(cookieParser());
 
-  // Public routes
   app.use('/api/auth', authRoutes);
-
-  // Protected routes
   app.use('/api/conversations', authMiddleware, conversationRoutes);
   app.use('/api/files', authMiddleware, fileRoutes);
   app.use('/api/folders', authMiddleware, folderRoutes);

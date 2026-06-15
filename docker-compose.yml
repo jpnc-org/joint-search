@@ -24,9 +24,9 @@ services:
 
   backend:
     build: ./backend
-    ports:
-      - "3001:3001"
     env_file: .env
+    expose:
+      - "3001"
     depends_on:
       postgres:
         condition: service_healthy
