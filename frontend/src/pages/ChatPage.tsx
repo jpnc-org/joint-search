@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/client';
-import { streamChat } from '../utils/sse';
-import type { Conversation, Message, Capabilities } from '../types';
-import { useAuth } from '../contexts/AuthContext';
+import { Plus, Send, Trash2, FolderOpen, LogOut } from 'lucide-react';
+import api from '@/api/client';
+import { streamChat } from '@/utils/sse';
+import type { Conversation, Message, Capabilities } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const CAP_LABELS: Record<keyof Capabilities, string> = {
   code_interpreter: 'Code',
@@ -104,66 +109,65 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen" style={{ background: 'var(--color-surface-0)' }}>
-      {/* Sidebar */}
-      <div className="w-64 flex flex-col shrink-0" style={{ background: 'var(--color-surface-1)', borderRight: '1px solid var(--color-border)' }}>
-        <div className="p-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <button onClick={createConversation} className="w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors" style={{ background: 'var(--color-accent)', color: '#fff' }}>
-            New Chat
-          </button>
+    <div className="flex h-screen bg-background">
+      <div className="flex w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border">
+        <div className="p-3">
+          <Button onClick={createConversation} className="w-full" size="sm">
+            <Plus className="size-4" /> New Chat
+          </Button>
         </div>
+        <Separator />
         <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
           {conversations.map((conv) => (
             <div key={conv.id} className="group flex items-center gap-1">
               <button
                 onClick={() => { setActiveConvId(conv.id); setCapabilities(conv.capabilities); }}
-                className="flex-1 text-left px-3 py-2 rounded-lg text-sm truncate transition-colors"
-                style={{
-                  background: conv.id === activeConvId ? 'var(--color-surface-3)' : 'transparent',
-                  color: conv.id === activeConvId ? 'var(--color-text)' : 'var(--color-text-muted)',
-                }}
+                className={cn(
+                  "flex-1 truncate rounded-md px-3 py-2 text-left text-sm transition-colors",
+                  conv.id === activeConvId
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
+                )}
               >
                 {conv.title}
               </button>
               <button
                 onClick={() => deleteConversation(conv.id)}
-                className="px-1.5 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ color: 'var(--color-text-muted)' }}
+                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
               >
-                ×
+                <Trash2 className="size-3.5" />
               </button>
             </div>
           ))}
         </div>
-        <div className="p-3 space-y-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <div className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{user?.email}</div>
+        <Separator />
+        <div className="p-3 space-y-2">
+          <div className="truncate text-xs text-muted-foreground">{user?.email}</div>
           <div className="flex gap-1.5">
-            <button onClick={() => navigate('/knowledge-base')} className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-muted)' }}>
-              KB
-            </button>
-            <button onClick={logout} className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-muted)' }}>
-              Logout
-            </button>
+            <Button onClick={() => navigate('/knowledge-base')} variant="secondary" size="sm" className="flex-1">
+              <FolderOpen className="size-3.5" /> KB
+            </Button>
+            <Button onClick={logout} variant="secondary" size="sm" className="flex-1">
+              <LogOut className="size-3.5" /> Logout
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Capabilities bar */}
-        <div className="px-4 py-2.5 flex items-center gap-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          {(['code_interpreter', 'rlm', 'rag', 'web_search'] as const).map((cap) => {
+      <div className="flex flex-1 flex-col min-w-0">
+        <div className="flex items-center gap-2 border-b px-4 py-2.5">
+          {(Object.keys(CAP_LABELS) as (keyof Capabilities)[]).map((cap) => {
             const on = capabilities[cap];
             return (
               <button
                 key={cap}
                 onClick={() => updateCapabilities({ ...capabilities, [cap]: !on })}
-                className="px-2.5 py-1 rounded-md text-xs font-medium transition-all"
-                style={{
-                  background: on ? 'var(--color-accent)' : 'var(--color-surface-2)',
-                  color: on ? '#fff' : 'var(--color-text-muted)',
-                  border: `1px solid ${on ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                }}
+                className={cn(
+                  "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                  on
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-secondary text-muted-foreground hover:bg-accent"
+                )}
               >
                 {CAP_LABELS[cap]}
               </button>
@@ -171,25 +175,23 @@ export default function ChatPage() {
           })}
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto py-6 px-4 space-y-6">
+          <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {messages.length === 0 && (
-              <div className="text-center py-20">
-                <p className="text-lg font-medium" style={{ color: 'var(--color-text-muted)' }}>Start a conversation</p>
-                <p className="text-sm mt-1" style={{ color: 'var(--color-border-hover)' }}>Ask anything about your research</p>
+              <div className="py-20 text-center">
+                <p className="text-lg font-medium text-muted-foreground">Start a conversation</p>
+                <p className="mt-1 text-sm text-muted-foreground/60">Ask anything about your research</p>
               </div>
             )}
             {messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={msg.id} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
                 <div
-                  className="max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed"
-                  style={{
-                    background: msg.role === 'user' ? 'var(--color-accent)' : 'var(--color-surface-2)',
-                    color: msg.role === 'user' ? '#fff' : 'var(--color-text)',
-                    borderBottomRightRadius: msg.role === 'user' ? '4px' : undefined,
-                    borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : undefined,
-                  }}
+                  className={cn(
+                    "max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                    msg.role === 'user'
+                      ? "rounded-br-md bg-primary text-primary-foreground"
+                      : "rounded-bl-md bg-secondary text-secondary-foreground"
+                  )}
                 >
                   <div className="whitespace-pre-wrap">{msg.content}</div>
                 </div>
@@ -199,35 +201,27 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Input */}
         <div className="px-4 pb-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-end gap-2 rounded-2xl p-2" style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)' }}>
-              <textarea
+          <div className="mx-auto max-w-3xl">
+            <div className="flex items-end gap-2 rounded-xl border bg-card p-2">
+              <Textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                 placeholder="Message..."
-                className="flex-1 bg-transparent resize-none outline-none text-sm py-1.5 px-2"
-                style={{ color: 'var(--color-text)', minHeight: '24px', maxHeight: '150px' }}
+                className="min-h-[24px] max-h-[150px] resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
                 rows={1}
                 disabled={streaming}
               />
-              <button
+              <Button
                 onClick={handleSend}
                 disabled={streaming || !input.trim()}
-                className="p-2 rounded-lg transition-colors shrink-0"
-                style={{
-                  background: input.trim() ? 'var(--color-accent)' : 'var(--color-surface-3)',
-                  color: input.trim() ? '#fff' : 'var(--color-text-muted)',
-                  opacity: streaming ? 0.5 : 1,
-                }}
+                size="icon"
+                className="shrink-0"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 2L11 13" /><path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                </svg>
-              </button>
+                <Send className="size-4" />
+              </Button>
             </div>
           </div>
         </div>
