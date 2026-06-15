@@ -5,6 +5,13 @@ import { streamChat } from '../utils/sse';
 import type { Conversation, Message, Capabilities } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
+const CAP_LABELS: Record<keyof Capabilities, string> = {
+  code_interpreter: 'Code',
+  rlm: 'RLM',
+  rag: 'RAG',
+  web_search: 'Web',
+};
+
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -12,26 +19,16 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [capabilities, setCapabilities] = useState<Capabilities>({
-    code_interpreter: false,
-    rlm: false,
-    rag: false,
-    web_search: false,
+    code_interpreter: false, rlm: false, rag: false, web_search: false,
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadConversations();
-  }, []);
-
-  useEffect(() => {
-    if (activeConvId) loadMessages(activeConvId);
-  }, [activeConvId]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(() => { loadConversations(); }, []);
+  useEffect(() => { if (activeConvId) loadMessages(activeConvId); }, [activeConvId]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const loadConversations = async () => {
     const { data } = await api.get('/conversations');
@@ -53,6 +50,16 @@ export default function ChatPage() {
     setActiveConvId(data.id);
     setCapabilities(data.capabilities);
     setMessages([]);
+    inputRef.current?.focus();
+  };
+
+  const deleteConversation = async (id: string) => {
+    await api.delete(`/conversations/${id}`);
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (activeConvId === id) {
+      setActiveConvId(null);
+      setMessages([]);
+    }
   };
 
   const updateCapabilities = async (caps: Capabilities) => {
@@ -67,22 +74,14 @@ export default function ChatPage() {
     setInput('');
 
     const userMsg: Message = {
-      id: crypto.randomUUID(),
-      conversationId: activeConvId,
-      role: 'user',
-      content,
-      metadata: null,
-      createdAt: new Date().toISOString(),
+      id: crypto.randomUUID(), conversationId: activeConvId, role: 'user',
+      content, metadata: null, createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
-
     setStreaming(true);
     let assistantContent = '';
 
-    await streamChat(
-      activeConvId,
-      content,
-      [],
+    await streamChat(activeConvId, content, [],
       (token) => {
         assistantContent += token;
         setMessages((prev) => {
@@ -90,147 +89,146 @@ export default function ChatPage() {
           if (last?.role === 'assistant') {
             return [...prev.slice(0, -1), { ...last, content: assistantContent }];
           }
-          return [
-            ...prev,
-            {
-              id: 'streaming',
-              conversationId: activeConvId!,
-              role: 'assistant' as const,
-              content: assistantContent,
-              metadata: null,
-              createdAt: new Date().toISOString(),
-            },
-          ];
+          return [...prev, {
+            id: 'streaming', conversationId: activeConvId!, role: 'assistant' as const,
+            content: assistantContent, metadata: null, createdAt: new Date().toISOString(),
+          }];
         });
       },
       (messageId) => {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === 'streaming' ? { ...m, id: messageId } : m))
-        );
+        setMessages((prev) => prev.map((m) => (m.id === 'streaming' ? { ...m, id: messageId } : m)));
         setStreaming(false);
       },
-      (error) => {
-        console.error('Stream error:', error);
-        setStreaming(false);
-      }
+      () => { setStreaming(false); }
     );
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen" style={{ background: 'var(--color-surface-0)' }}>
       {/* Sidebar */}
-      <div className="w-64 bg-gray-900 text-white flex flex-col">
-        <div className="p-4 border-b border-gray-700">
-          <button
-            onClick={createConversation}
-            className="w-full py-2 px-3 bg-indigo-600 rounded hover:bg-indigo-700 text-sm"
-          >
-            + New Chat
+      <div className="w-64 flex flex-col shrink-0" style={{ background: 'var(--color-surface-1)', borderRight: '1px solid var(--color-border)' }}>
+        <div className="p-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <button onClick={createConversation} className="w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors" style={{ background: 'var(--color-accent)', color: '#fff' }}>
+            New Chat
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
           {conversations.map((conv) => (
-            <button
-              key={conv.id}
-              onClick={() => {
-                setActiveConvId(conv.id);
-                setCapabilities(conv.capabilities);
-              }}
-              className={`w-full text-left px-3 py-2 rounded text-sm mb-1 ${
-                conv.id === activeConvId
-                  ? 'bg-gray-700'
-                  : 'hover:bg-gray-800'
-              }`}
-            >
-              {conv.title}
-            </button>
+            <div key={conv.id} className="group flex items-center gap-1">
+              <button
+                onClick={() => { setActiveConvId(conv.id); setCapabilities(conv.capabilities); }}
+                className="flex-1 text-left px-3 py-2 rounded-lg text-sm truncate transition-colors"
+                style={{
+                  background: conv.id === activeConvId ? 'var(--color-surface-3)' : 'transparent',
+                  color: conv.id === activeConvId ? 'var(--color-text)' : 'var(--color-text-muted)',
+                }}
+              >
+                {conv.title}
+              </button>
+              <button
+                onClick={() => deleteConversation(conv.id)}
+                className="px-1.5 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                ×
+              </button>
+            </div>
           ))}
         </div>
-        <div className="p-4 border-t border-gray-700">
-          <div className="text-sm text-gray-400 mb-2">{user?.email}</div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate('/knowledge-base')}
-              className="text-xs px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
-            >
-              Knowledge Base
+        <div className="p-3 space-y-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{user?.email}</div>
+          <div className="flex gap-1.5">
+            <button onClick={() => navigate('/knowledge-base')} className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-muted)' }}>
+              KB
             </button>
-            <button
-              onClick={logout}
-              className="text-xs px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
-            >
+            <button onClick={logout} className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-muted)' }}>
               Logout
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Capability Toggles */}
-        <div className="px-4 py-2 border-b flex gap-3 text-sm">
-          {(['code_interpreter', 'rlm', 'rag', 'web_search'] as const).map((cap) => (
-            <label key={cap} className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={capabilities[cap]}
-                onChange={(e) =>
-                  updateCapabilities({ ...capabilities, [cap]: e.target.checked })
-                }
-                className="rounded"
-              />
-              <span className="capitalize">{cap.replace('_', ' ')}</span>
-            </label>
-          ))}
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Capabilities bar */}
+        <div className="px-4 py-2.5 flex items-center gap-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          {(['code_interpreter', 'rlm', 'rag', 'web_search'] as const).map((cap) => {
+            const on = capabilities[cap];
+            return (
+              <button
+                key={cap}
+                onClick={() => updateCapabilities({ ...capabilities, [cap]: !on })}
+                className="px-2.5 py-1 rounded-md text-xs font-medium transition-all"
+                style={{
+                  background: on ? 'var(--color-accent)' : 'var(--color-surface-2)',
+                  color: on ? '#fff' : 'var(--color-text-muted)',
+                  border: `1px solid ${on ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                }}
+              >
+                {CAP_LABELS[cap]}
+              </button>
+            );
+          })}
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-2xl px-4 py-2 rounded-lg ${
-                  msg.role === 'user'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
-                }`}
-              >
-                <div className="whitespace-pre-wrap text-sm">{msg.content}</div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto py-6 px-4 space-y-6">
+            {messages.length === 0 && (
+              <div className="text-center py-20">
+                <p className="text-lg font-medium" style={{ color: 'var(--color-text-muted)' }}>Start a conversation</p>
+                <p className="text-sm mt-1" style={{ color: 'var(--color-border-hover)' }}>Ask anything about your research</p>
               </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
+            )}
+            {messages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className="max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed"
+                  style={{
+                    background: msg.role === 'user' ? 'var(--color-accent)' : 'var(--color-surface-2)',
+                    color: msg.role === 'user' ? '#fff' : 'var(--color-text)',
+                    borderBottomRightRadius: msg.role === 'user' ? '4px' : undefined,
+                    borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : undefined,
+                  }}
+                >
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t">
-          <div className="flex gap-2">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a message... (use @ to mention files)"
-              className="flex-1 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              rows={2}
-              disabled={streaming}
-            />
-            <button
-              onClick={handleSend}
-              disabled={streaming || !input.trim()}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-            >
-              Send
-            </button>
+        <div className="px-4 pb-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-end gap-2 rounded-2xl p-2" style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)' }}>
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                placeholder="Message..."
+                className="flex-1 bg-transparent resize-none outline-none text-sm py-1.5 px-2"
+                style={{ color: 'var(--color-text)', minHeight: '24px', maxHeight: '150px' }}
+                rows={1}
+                disabled={streaming}
+              />
+              <button
+                onClick={handleSend}
+                disabled={streaming || !input.trim()}
+                className="p-2 rounded-lg transition-colors shrink-0"
+                style={{
+                  background: input.trim() ? 'var(--color-accent)' : 'var(--color-surface-3)',
+                  color: input.trim() ? '#fff' : 'var(--color-text-muted)',
+                  opacity: streaming ? 0.5 : 1,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2L11 13" /><path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>

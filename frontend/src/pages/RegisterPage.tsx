@@ -26,40 +26,52 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow">
-        <h1 className="text-2xl font-bold text-center mb-6">Create Account</h1>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-surface-0)' }}>
+      <div className="w-full max-w-sm p-8 rounded-xl" style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border)' }}>
+        <div className="mb-8 text-center">
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>Create Account</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Get started with DeepResearch</p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>
+            <div className="px-3 py-2 rounded text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>{error}</div>
           )}
           <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors"
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-accent)'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors"
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-accent)'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors"
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-accent)'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
               required
               minLength={8}
             />
@@ -67,16 +79,15 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+            className="w-full py-2.5 rounded-lg text-sm font-medium transition-colors"
+            style={{ background: 'var(--color-accent)', color: '#fff', opacity: loading ? 0.5 : 1 }}
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-xs" style={{ color: 'var(--color-text-muted)' }}>
           Already have an account?{' '}
-          <Link to="/login" className="text-indigo-600 hover:underline">
-            Sign in
-          </Link>
+          <Link to="/login" style={{ color: 'var(--color-accent)' }} className="hover:underline">Sign in</Link>
         </p>
       </div>
     </div>
