@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, Trash2, FolderOpen, LogOut, Sparkles } from 'lucide-react';
+import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles } from 'lucide-react';
 import api from '@/api/client';
 import { streamChat } from '@/utils/sse';
 import type { Conversation, Message, Capabilities } from '@/types';
@@ -8,7 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { ChatBubble } from 'performative-ui';
 
 const CAP_LABELS: Record<keyof Capabilities, string> = {
   code_interpreter: 'Code',
@@ -67,12 +69,6 @@ export default function ChatPage() {
     }
   };
 
-  const updateCapabilities = async (caps: Capabilities) => {
-    if (!activeConvId) return;
-    setCapabilities(caps);
-    await api.patch(`/conversations/${activeConvId}`, { capabilities: caps });
-  };
-
   const handleSend = async () => {
     if (!input.trim() || !activeConvId || streaming) return;
     const content = input.trim();
@@ -112,7 +108,7 @@ export default function ChatPage() {
     <div className="flex h-screen bg-background">
       <div className="flex w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border">
         <div className="p-3">
-          <Button onClick={createConversation} className="w-full" size="sm">
+          <Button onClick={createConversation} className="w-full cursor-pointer" size="sm">
             <Plus className="size-4" /> New Chat
           </Button>
         </div>
@@ -123,7 +119,7 @@ export default function ChatPage() {
               <button
                 onClick={() => { setActiveConvId(conv.id); setCapabilities(conv.capabilities); }}
                 className={cn(
-                  "flex-1 truncate rounded-md px-3 py-2 text-left text-sm transition-colors",
+                  "flex-1 truncate rounded-md px-3 py-2 text-left text-sm transition-colors cursor-pointer",
                   conv.id === activeConvId
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
@@ -133,7 +129,7 @@ export default function ChatPage() {
               </button>
               <button
                 onClick={() => deleteConversation(conv.id)}
-                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -142,14 +138,23 @@ export default function ChatPage() {
         </div>
         <Separator />
         <div className="p-3 space-y-2">
-          <div className="truncate text-xs text-muted-foreground">{user?.email}</div>
-          <div className="flex gap-1.5">
-            <Button onClick={() => navigate('/knowledge-base')} variant="secondary" size="sm" className="flex-1">
-              <FolderOpen className="size-3.5" /> KB
+          <div className="truncate text-sm font-medium">{user?.name}</div>
+          <div className="flex flex-col gap-1.5">
+            <Button onClick={() => navigate('/knowledge-base')} variant="secondary" size="sm" className="w-full cursor-pointer">
+              <FolderOpen className="size-3.5" /> Knowledge Base
             </Button>
-            <Button onClick={logout} variant="secondary" size="sm" className="flex-1">
-              <LogOut className="size-3.5" /> Logout
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" className="w-full cursor-pointer">
+                  <Settings className="size-3.5" /> Settings
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -161,12 +166,12 @@ export default function ChatPage() {
             return (
               <button
                 key={cap}
-                onClick={() => updateCapabilities({ ...capabilities, [cap]: !on })}
+                disabled
                 className={cn(
-                  "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                  "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors opacity-50 cursor-not-allowed",
                   on
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-secondary text-muted-foreground hover:bg-accent"
+                    : "border-border bg-secondary text-muted-foreground"
                 )}
               >
                 {CAP_LABELS[cap]}
@@ -187,18 +192,15 @@ export default function ChatPage() {
               </div>
             )}
             {messages.map((msg) => (
-              <div key={msg.id} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
-                <div
-                  className={cn(
-                    "max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                    msg.role === 'user'
-                      ? "rounded-br-md bg-primary text-primary-foreground"
-                      : "rounded-bl-md bg-secondary text-secondary-foreground"
-                  )}
-                >
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
-                </div>
-              </div>
+              msg.role === 'user' ? (
+                <ChatBubble key={msg.id} role="user">
+                  {msg.content}
+                </ChatBubble>
+              ) : (
+                <ChatBubble key={msg.id} role="ai" agent="DeepResearch" thinking={streaming && msg.id === 'streaming' ? 'thinking...' : false}>
+                  {msg.content}
+                </ChatBubble>
+              )
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -221,7 +223,7 @@ export default function ChatPage() {
                 onClick={handleSend}
                 disabled={streaming || !input.trim()}
                 size="icon"
-                className="shrink-0"
+                className="shrink-0 cursor-pointer"
               >
                 <Send className="size-4" />
               </Button>

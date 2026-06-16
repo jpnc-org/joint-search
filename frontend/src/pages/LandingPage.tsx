@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, FileText, Layers,
+  FileText, Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,11 +8,9 @@ import {
   EyebrowPill, NodeGraphBackground, FloatingSparkles,
   BeforeAfter, SlippyWords, WordRoll,
 } from 'performative-ui';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
@@ -36,16 +34,8 @@ export default function LandingPage() {
             <Sparkle /> DeepResearch
           </div>
           <div className="flex items-center gap-2">
-            {user ? (
-              <Button onClick={() => navigate('/chat')} size="sm" className="cursor-pointer">
-                Open Chat <ArrowRight className="size-4" />
-              </Button>
-            ) : (
-              <>
-                <Button onClick={() => navigate('/login')} variant="ghost" size="sm" className="cursor-pointer">Sign in</Button>
-                <Button onClick={() => navigate('/register')} size="sm" className="cursor-pointer">Get started</Button>
-              </>
-            )}
+            <Button onClick={() => navigate('/login')} variant="ghost" size="sm" className="cursor-pointer">Sign in</Button>
+            <Button onClick={() => navigate('/register')} size="sm" className="cursor-pointer">Get started</Button>
           </div>
         </nav>
 
@@ -64,16 +54,6 @@ export default function LandingPage() {
           <p className="mt-6 max-w-xl text-balance text-lg text-muted-foreground">
             Upload your knowledge base, enable web search or code execution, and get grounded answers with traceable sources.
           </p>
-
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
-            <Button onClick={() => navigate(user ? '/chat' : '/register')} size="lg" className="w-full cursor-pointer sm:w-auto">
-              {user ? 'Open Chat' : 'Get started free'}
-              <ArrowRight className="size-4" />
-            </Button>
-            <Button onClick={() => navigate(user ? '/knowledge-base' : '/login')} variant="outline" size="lg" className="w-full cursor-pointer sm:w-auto">
-              {user ? 'Knowledge Base' : 'Sign in'}
-            </Button>
-          </div>
         </section>
 
         {/* SlippyWords */}
