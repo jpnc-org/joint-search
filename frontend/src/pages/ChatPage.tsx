@@ -166,12 +166,18 @@ export default function ChatPage() {
             return (
               <button
                 key={cap}
-                disabled
+                onClick={() => {
+                  const next = { ...capabilities, [cap]: !on };
+                  setCapabilities(next);
+                  if (activeConvId) {
+                    api.patch(`/conversations/${activeConvId}`, { capabilities: next });
+                  }
+                }}
                 className={cn(
-                  "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors opacity-50 cursor-not-allowed",
+                  "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
                   on
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-secondary text-muted-foreground"
+                    : "border-border bg-secondary text-muted-foreground hover:bg-accent"
                 )}
               >
                 {CAP_LABELS[cap]}

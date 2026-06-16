@@ -8,9 +8,11 @@ import {
   EyebrowPill, NodeGraphBackground, FloatingSparkles,
   BeforeAfter, SlippyWords, WordRoll,
 } from 'performative-ui';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
@@ -34,8 +36,16 @@ export default function LandingPage() {
             <Sparkle /> DeepResearch
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => navigate('/login')} variant="ghost" size="sm" className="cursor-pointer">Sign in</Button>
-            <Button onClick={() => navigate('/register')} size="sm" className="cursor-pointer">Get started</Button>
+            {user ? (
+              <Button onClick={() => navigate('/chat')} size="sm" className="cursor-pointer">
+                Open Chat
+              </Button>
+            ) : (
+              <>
+                <Button onClick={() => navigate('/login')} variant="ghost" size="sm" className="cursor-pointer">Sign in</Button>
+                <Button onClick={() => navigate('/register')} size="sm" className="cursor-pointer">Get started</Button>
+              </>
+            )}
           </div>
         </nav>
 
