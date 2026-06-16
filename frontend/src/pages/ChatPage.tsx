@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search } from 'lucide-react';
+import { v4 as uuid } from 'uuid';
 import api from '@/api/client';
 import { streamChat } from '@/utils/sse';
 import type { Conversation, Message, Capabilities } from '@/types';
@@ -79,7 +80,7 @@ export default function ChatPage() {
     setInput('');
 
     const userMsg: Message = {
-      id: crypto.randomUUID(), conversationId: activeConvId, role: 'user',
+      id: uuid(), conversationId: activeConvId, role: 'user',
       content, metadata: null, createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);

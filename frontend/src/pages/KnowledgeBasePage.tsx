@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FolderPlus, FileUp, Trash2, Folder as FolderIcon, FileText, ChevronRight, Plus } from 'lucide-react';
+import { v4 as uuid } from 'uuid';
 import api from '@/api/client';
 import type { FileItem, Folder, Tag, KnowledgeBase } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -94,7 +95,7 @@ export default function KnowledgeBasePage() {
 
   const createKB = async () => {
     if (!newKBName.trim()) return;
-    const tempId = crypto.randomUUID();
+    const tempId = uuid();
     const optimisticKB: KnowledgeBase = { id: tempId, userId: '', name: newKBName, description: newKBDesc || null, createdAt: new Date().toISOString() };
     setKnowledgeBases((prev) => [optimisticKB, ...prev]);
     setShowCreateDialog(false);
@@ -129,7 +130,7 @@ export default function KnowledgeBasePage() {
 
   const createFolder = async () => {
     if (!newFolderName.trim() || !activeKBId) return;
-    const tempId = crypto.randomUUID();
+    const tempId = uuid();
     const optimistic: Folder = { id: tempId, userId: '', knowledgeBaseId: activeKBId, name: newFolderName, parentId: activeFolderId, createdAt: new Date().toISOString() };
     setFolders((prev) => [...prev, optimistic]);
     setNewFolderName('');
@@ -153,7 +154,7 @@ export default function KnowledgeBasePage() {
 
   const createTag = async () => {
     if (!newTagName.trim() || !activeKBId) return;
-    const tempId = crypto.randomUUID();
+    const tempId = uuid();
     const optimistic: Tag = { id: tempId, userId: '', knowledgeBaseId: activeKBId, name: newTagName, color: newTagColor, createdAt: new Date().toISOString() };
     setTags((prev) => [...prev, optimistic]);
     setNewTagName('');
