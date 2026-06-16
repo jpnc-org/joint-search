@@ -25,6 +25,7 @@ export interface Message {
   conversationId: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  reasoning: string | null;
   metadata: { fileMentions?: FileMention[] } | null;
   createdAt: string;
 }

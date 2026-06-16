@@ -5,6 +5,7 @@ export async function streamChat(
   conversationId: string,
   content: string,
   fileMentions: FileMention[],
+  onReasoning: (token: string) => void,
   onToken: (token: string) => void,
   onDone: (messageId: string) => void,
   onError: (error: string) => void
@@ -46,7 +47,8 @@ export async function streamChat(
       const eventType = eventMatch[1].trim();
       try {
         const data = JSON.parse(dataMatch[1]);
-        if (eventType === 'token') onToken(data.token);
+        if (eventType === 'reasoning') onReasoning(data.token);
+        else if (eventType === 'token') onToken(data.token);
         else if (eventType === 'done') onDone(data.messageId);
         else if (eventType === 'error') onError(data.error);
       } catch {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
 import api from '@/api/client';
@@ -22,8 +22,9 @@ const CAP_LABELS: Record<keyof Capabilities, string> = {
 };
 
 export default function ChatPage() {
+  const { conversationId } = useParams<{ conversationId?: string }>();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [activeConvId, setActiveConvId] = useState<string | null>(conversationId ?? null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +46,10 @@ export default function ChatPage() {
     const params = searchQuery ? { q: searchQuery } : {};
     const { data } = await api.get('/conversations', { params });
     setConversations(data);
+    if (conversationId && conversationId === activeConvId) {
+      const conv = data.find((c: Conversation) => c.id === conversationId);
+      if (conv) setCapabilities(conv.capabilities);
+    }
   };
 
   const loadMessages = async (convId: string) => {
@@ -56,6 +61,7 @@ export default function ChatPage() {
     setActiveConvId(null);
     setMessages([]);
     setCapabilities({ code_interpreter: false, rlm: false, rag: false, web_search: false });
+    navigate('/chat');
     inputRef.current?.focus();
   };
 
@@ -65,6 +71,7 @@ export default function ChatPage() {
     if (activeConvId === id) {
       setActiveConvId(null);
       setMessages([]);
+      navigate('/chat');
     }
   };
 
@@ -84,16 +91,31 @@ export default function ChatPage() {
         convId = newConv.id;
         setActiveConvId(convId);
         setCapabilities(newConv.capabilities);
+        navigate(`/chat/${convId}`);
       }
 
       const userMsg: Message = {
         id: uuid(), conversationId: convId, role: 'user',
-        content, metadata: null, createdAt: new Date().toISOString(),
+        content, reasoning: null, metadata: null, createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, userMsg]);
+      let assistantReasoning = '';
       let assistantContent = '';
 
       await streamChat(convId, content, [],
+        (token) => {
+          assistantReasoning += token;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'assistant') {
+              return [...prev.slice(0, -1), { ...last, reasoning: assistantReasoning }];
+            }
+            return [...prev, {
+              id: 'streaming', conversationId: convId!, role: 'assistant' as const,
+              content: '', reasoning: assistantReasoning, metadata: null, createdAt: new Date().toISOString(),
+            }];
+          });
+        },
         (token) => {
           assistantContent += token;
           setMessages((prev) => {
@@ -103,7 +125,7 @@ export default function ChatPage() {
             }
             return [...prev, {
               id: 'streaming', conversationId: convId!, role: 'assistant' as const,
-              content: assistantContent, metadata: null, createdAt: new Date().toISOString(),
+              content: assistantContent, reasoning: assistantReasoning, metadata: null, createdAt: new Date().toISOString(),
             }];
           });
         },
@@ -139,7 +161,7 @@ export default function ChatPage() {
           {conversations.map((conv) => (
             <div key={conv.id} className="group flex items-center gap-1">
               <button
-                onClick={() => { setActiveConvId(conv.id); setCapabilities(conv.capabilities); }}
+                onClick={() => { setActiveConvId(conv.id); setCapabilities(conv.capabilities); navigate(`/chat/${conv.id}`); }}
                 className={cn(
                   "flex-1 truncate rounded-md px-3 py-2 text-left text-sm transition-colors cursor-pointer",
                   conv.id === activeConvId
@@ -225,9 +247,21 @@ export default function ChatPage() {
                   {msg.content}
                 </ChatBubble>
               ) : (
-                <ChatBubble key={msg.id} role="ai" agent="DeepResearch" thinking={streaming && msg.id === 'streaming' ? 'thinking...' : false}>
-                  {msg.content}
-                </ChatBubble>
+                <div key={msg.id} className="space-y-2">
+                  {msg.reasoning && (
+                    <details className="group rounded-lg border border-border bg-secondary/50 text-sm">
+                      <summary className="cursor-pointer px-4 py-2.5 font-medium text-muted-foreground select-none">
+                        Reasoning
+                      </summary>
+                      <div className="border-t border-border px-4 py-3 text-muted-foreground whitespace-pre-wrap">
+                        {msg.reasoning}
+                      </div>
+                    </details>
+                  )}
+                  <ChatBubble role="ai" agent="DeepResearch" thinking={streaming && msg.id === 'streaming' && !msg.content ? 'thinking...' : false}>
+                    {msg.content}
+                  </ChatBubble>
+                </div>
               )
             ))}
             <div ref={messagesEndRef} />

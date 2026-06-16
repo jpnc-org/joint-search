@@ -34,6 +34,9 @@ export class Message {
   @Column({ type: 'text' })
   content!: string;
 
+  @Column({ type: 'text', nullable: true })
+  reasoning!: string | null;
+
   @Column({ type: 'jsonb', nullable: true })
   metadata!: { fileMentions?: FileMention[] } | null;
 

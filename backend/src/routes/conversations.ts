@@ -157,21 +157,50 @@ router.post('/:id/messages', async (req: AuthRequest, res: Response) => {
     res.flushHeaders();
 
     // Placeholder: forward to model service
-    // For now, echo back a placeholder response
-    const placeholderResponse =
-      'This is a placeholder response. The model integration will be connected separately.';
-    const words = placeholderResponse.split(' ');
+    // For now, stream a mock reasoning + answer response
+    const reasoningText =
+      'The user is asking about ' + content.slice(0, 60) + '. Let me analyze this step by step. ' +
+      'First, I need to consider the key aspects of this question. ' +
+      'There are several factors at play here that I should examine carefully. ' +
+      'Looking at the available information, I can identify the most relevant points. ' +
+      'After careful consideration of all the evidence and context, I am ready to form a comprehensive answer.';
 
-    for (let i = 0; i < words.length; i++) {
-      const word = (i > 0 ? ' ' : '') + words[i];
+    const answerText =
+      'Based on my analysis, here is what I found:\n\n' +
+      'The topic you raised involves multiple dimensions that are worth exploring. ' +
+      'At its core, the question touches on fundamental concepts that have been widely discussed in the field. ' +
+      'The key insight is that there is no single definitive answer — rather, it depends on the specific context and constraints involved.\n\n' +
+      'Here are the main points to consider:\n\n' +
+      '**1. Context Matters** — The answer can vary significantly depending on the specific scenario and requirements. ' +
+      'What works in one situation may not be optimal in another.\n\n' +
+      '**2. Trade-offs** — There are inherent trade-offs between different approaches. ' +
+      'Balancing these competing factors is essential for reaching a well-informed conclusion.\n\n' +
+      '**3. Evidence-Based** — The best approach is to rely on empirical evidence and established principles ' +
+      'rather than assumptions. This ensures a more reliable and reproducible outcome.\n\n' +
+      'In summary, while there are several valid perspectives on this topic, ' +
+      'the most practical approach would be to start with a clear understanding of your specific goals, ' +
+      'then evaluate the available options against those criteria. ' +
+      'This structured approach will help you arrive at the best possible decision.';
+
+    const reasoningWords = reasoningText.split(' ');
+    for (let i = 0; i < reasoningWords.length; i++) {
+      const word = (i > 0 ? ' ' : '') + reasoningWords[i];
+      res.write(`event: reasoning\ndata: ${JSON.stringify({ token: word })}\n\n`);
+      await new Promise((r) => setTimeout(r, 30));
+    }
+
+    const answerWords = answerText.split(' ');
+    for (let i = 0; i < answerWords.length; i++) {
+      const word = (i > 0 ? ' ' : '') + answerWords[i];
       res.write(`event: token\ndata: ${JSON.stringify({ token: word })}\n\n`);
-      await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 30));
     }
 
     const assistantMessage = msgRepo().create({
       conversationId: conversation.id,
       role: 'assistant',
-      content: placeholderResponse,
+      reasoning: reasoningText,
+      content: answerText,
     });
     await msgRepo().save(assistantMessage);
 
