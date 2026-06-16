@@ -47,10 +47,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   };
 
-  const logout = () => {
+  const logout = async () => {
     setAccessToken(null);
     setUser(null);
-    api.post('/auth/logout').catch(() => {});
+    try {
+      await api.post('/auth/logout');
+    } catch {}
     window.location.href = '/';
   };
 
