@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { Aurora } from 'performative-ui';
 
 const CAP_LABELS: Record<keyof Capabilities, string> = {
   code_interpreter: 'Code',
@@ -179,13 +178,7 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {messages.length === 0 && (
-              <div className="relative flex flex-col items-center justify-center py-20">
-                <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                  <Aurora static blur={80} blobs={[
-                    { color: 'rgba(99,102,241,0.25)', x: 30, y: 40, size: 40 },
-                    { color: 'rgba(168,85,247,0.2)', x: 70, y: 30, size: 35 },
-                  ]} />
-                </div>
+              <div className="flex flex-col items-center justify-center py-20">
                 <div className="relative z-10 text-center">
                   <Sparkles className="mx-auto mb-3 size-8 text-primary" />
                   <p className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-xl font-medium text-transparent">Start a conversation</p>

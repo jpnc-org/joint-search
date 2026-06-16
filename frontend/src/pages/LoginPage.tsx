@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Aurora } from 'performative-ui';
+import { NodeGraphBackground, Sparkle } from 'performative-ui';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -32,12 +32,17 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
-      <Aurora static blur={80} className="absolute inset-0 h-full w-full" />
+      <NodeGraphBackground
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        density={40}
+        baseOpacity={0.3}
+        hoverDistance={0}
+      />
       <div className="relative z-10 w-full max-w-sm">
         <Card className="border-border/60 bg-card/80 backdrop-blur-xl">
           <CardHeader className="text-center">
-            <div className="mb-2">
-              <CardTitle className="text-xl">DeepResearch</CardTitle>
+            <div className="mb-2 flex items-center justify-center gap-1.5">
+              <Sparkle /> <CardTitle className="text-xl">DeepResearch</CardTitle>
             </div>
             <CardDescription>Sign in to your account</CardDescription>
           </CardHeader>
