@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  Rotator, GlassCard, Sparkle, GradientText,
+  GlassCard, Sparkle,
   EyebrowPill, NodeGraphBackground, FloatingSparkles,
   BeforeAfter, SlippyWords, WordRoll,
 } from 'performative-ui';
@@ -50,11 +50,12 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero */}
-        <section className="mx-auto flex max-w-4xl flex-col items-center px-6 pt-20 pb-16 text-center">
-          <h1 className="flex h-16 items-center justify-center gap-2 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            <span>Ground every answer in</span>
+        <section className="mx-auto flex max-w-5xl flex-col items-center px-6 pt-40 pb-16 text-center">
+          <h1 className="flex flex-wrap items-baseline justify-center gap-x-3 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+            <span>Stop guessing.</span>
+            <span>Start</span>
             <WordRoll
-              words={['evidence.', 'sources.', 'your documents.']}
+              words={['verifying.', 'fact-checking.', 'tracing sources.']}
               gradient
               intervalMs={2800}
             />
@@ -108,13 +109,7 @@ export default function LandingPage() {
           <div className="mb-10 text-center">
             <EyebrowPill icon={false} className="mb-4">The difference</EyebrowPill>
             <h2 className="text-3xl font-bold tracking-tight">
-              Stop guessing. Start{' '}
-              <GradientText>
-                <Rotator
-                  words={['verifying.', 'fact-checking.', 'tracing sources.']}
-                  hideCursor={false}
-                />
-              </GradientText>
+              Every claim, backed by evidence
             </h2>
           </div>
 
