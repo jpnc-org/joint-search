@@ -50,7 +50,7 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero */}
-        <section className="mx-auto flex max-w-5xl flex-col items-center px-6 pt-40 pb-16 text-center">
+        <section className="mx-auto flex max-w-5xl flex-col items-center px-6 pt-40 pb-32 text-center">
           <h1 className="flex flex-wrap items-baseline justify-center gap-x-3 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             <span>Stop guessing.</span>
             <span>Start</span>
@@ -77,35 +77,40 @@ export default function LandingPage() {
         </section>
 
         {/* SlippyWords */}
-        <section className="py-8">
+        <section className="py-16">
           <SlippyWords
             className="w-full"
-            intensity={120}
+            intensity={100}
             fade
             rows={[
               [
                 'Fact-Checking',
-                { label: 'Web Search', gradient: true },
+                'Web Search',
                 'Document Analysis',
                 'RAG',
-                { label: 'Deep Research', gradient: true },
+                'Deep Research',
                 'Citations',
                 'Source Tracing',
+                'Grounded Answers',
+                'Code Interpreter',
               ],
               [
-                { label: 'Code Interpreter', gradient: true },
                 'File Mentions',
                 'Knowledge Base',
-                'Grounded Answers',
-                { label: 'No Hallucinations', gradient: true },
+                'No Hallucinations',
                 'Per-conversation Toggles',
+                'Multi-hop Reasoning',
+                'Inline Sources',
+                'Tag Filtering',
+                'Nested Folders',
+                'SSE Streaming',
               ],
             ]}
           />
         </section>
 
         {/* Before / After */}
-        <section className="mx-auto max-w-4xl px-6 py-16">
+        <section className="mx-auto max-w-4xl px-6 py-32">
           <div className="mb-10 text-center">
             <EyebrowPill icon={false} className="mb-4">The difference</EyebrowPill>
             <h2 className="text-3xl font-bold tracking-tight">
@@ -133,14 +138,11 @@ export default function LandingPage() {
         </section>
 
         {/* Knowledge base section */}
-        <section className="mx-auto max-w-5xl px-6 py-16">
+        <section className="mx-auto max-w-5xl px-6 py-32">
           <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2">
             <div>
-              <EyebrowPill icon={false} className="mb-4">
-                <Layers className="size-5" /> Knowledge Base
-              </EyebrowPill>
-              <h2 className="text-2xl font-bold tracking-tight">
-                Organize your research, not just consume it
+              <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight">
+                <Layers className="size-7 text-primary" /> Knowledge Base
               </h2>
               <p className="mt-3 text-muted-foreground">
                 Create nested folders. Tag files for cross-referencing. Group documents into knowledge bases. Mention any file or tag by name in chat to pull context instantly.
