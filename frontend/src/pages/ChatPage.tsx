@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search } from 'lucide-react';
+import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search, ChevronRight } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
 import api from '@/api/client';
 import { streamChat } from '@/utils/sse';
@@ -247,21 +247,18 @@ export default function ChatPage() {
                   {msg.content}
                 </ChatBubble>
               ) : (
-                <div key={msg.id} className="space-y-2">
+                <ChatBubble key={msg.id} role="ai" agent="DeepResearch" thinking={streaming && msg.id === 'streaming' && !msg.content ? 'thinking...' : false}>
                   {msg.reasoning && (
-                    <details className="group rounded-lg border border-border bg-secondary/50 text-sm">
-                      <summary className="cursor-pointer px-4 py-2.5 font-medium text-muted-foreground select-none">
+                    <details className="mb-2 text-xs text-muted-foreground">
+                      <summary className="flex cursor-pointer items-center gap-1 select-none hover:text-foreground transition-colors [&::-webkit-details-marker]:hidden">
+                        <ChevronRight className="size-3 transition-transform group-open:rotate-90" />
                         Reasoning
                       </summary>
-                      <div className="border-t border-border px-4 py-3 text-muted-foreground whitespace-pre-wrap">
-                        {msg.reasoning}
-                      </div>
+                      <p className="mt-1 whitespace-pre-wrap pl-4">{msg.reasoning}</p>
                     </details>
                   )}
-                  <ChatBubble role="ai" agent="DeepResearch" thinking={streaming && msg.id === 'streaming' && !msg.content ? 'thinking...' : false}>
-                    {msg.content}
-                  </ChatBubble>
-                </div>
+                  {msg.content}
+                </ChatBubble>
               )
             ))}
             <div ref={messagesEndRef} />
