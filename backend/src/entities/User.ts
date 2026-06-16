@@ -20,7 +20,7 @@ export class User {
   @Column({ type: 'varchar', length: 255, unique: true })
   email!: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, name: 'password_hash' })
   passwordHash!: string;
 
   @Column({ type: 'varchar', length: 255 })
@@ -41,9 +41,9 @@ export class User {
   @OneToMany(() => KnowledgeBase, (kb) => kb.user)
   knowledgeBases!: KnowledgeBase[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }

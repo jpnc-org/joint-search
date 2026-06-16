@@ -17,11 +17,11 @@ export class KnowledgeBase {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', name: 'user_id' })
   userId!: string;
 
   @ManyToOne(() => User, (u) => u.knowledgeBases, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user!: User;
 
   @Column({ type: 'varchar', length: 255 })
@@ -39,6 +39,6 @@ export class KnowledgeBase {
   @OneToMany(() => Tag, (t) => t.knowledgeBase)
   tags!: Tag[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }

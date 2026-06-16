@@ -23,11 +23,11 @@ export class Conversation {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', name: 'user_id' })
   userId!: string;
 
   @ManyToOne(() => User, (u) => u.conversations, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user!: User;
 
   @Column({ type: 'varchar', length: 500, default: 'New Conversation' })
@@ -35,6 +35,7 @@ export class Conversation {
 
   @Column({
     type: 'jsonb',
+    name: 'capabilities',
     default: () => "'{\"code_interpreter\":false,\"rlm\":false,\"rag\":false,\"web_search\":false}'",
   })
   capabilities!: Capabilities;
@@ -42,9 +43,9 @@ export class Conversation {
   @OneToMany(() => Message, (m) => m.conversation)
   messages!: Message[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }

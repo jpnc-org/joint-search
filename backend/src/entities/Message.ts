@@ -21,11 +21,11 @@ export class Message {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', name: 'conversation_id' })
   conversationId!: string;
 
   @ManyToOne(() => Conversation, (c) => c.messages, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'conversationId' })
+  @JoinColumn({ name: 'conversation_id' })
   conversation!: Conversation;
 
   @Column({ type: 'varchar', length: 20 })
@@ -40,6 +40,6 @@ export class Message {
   @Column({ type: 'jsonb', nullable: true })
   metadata!: { fileMentions?: FileMention[] } | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }

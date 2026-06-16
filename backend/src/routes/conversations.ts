@@ -15,7 +15,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       .orderBy('conv.updatedAt', 'DESC');
     if (q) {
       qb.andWhere(
-        `(conv.title ILIKE :q OR EXISTS (SELECT 1 FROM messages m WHERE m.conversationId = conv.id AND m.content ILIKE :q))`,
+        `(conv.title ILIKE :q OR EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = conv.id AND m.content ILIKE :q))`,
         { q: `%${q}%` }
       );
     }
