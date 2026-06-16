@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Aurora, Sparkle } from 'performative-ui';
+import { Aurora } from 'performative-ui';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -36,8 +36,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-sm">
         <Card className="border-border/60 bg-card/80 backdrop-blur-xl">
           <CardHeader className="text-center">
-            <div className="mb-2 flex items-center justify-center gap-1.5">
-              <Sparkle glyph="✦" />
+            <div className="mb-2">
               <CardTitle className="text-xl">DeepResearch</CardTitle>
             </div>
             <CardDescription>Sign in to your account</CardDescription>
