@@ -4,12 +4,13 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
-  ManyToMany,
-  JoinTable,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { User } from './User';
+import { Folder } from './Folder';
 import { File } from './File';
+import { Tag } from './Tag';
 
 @Entity('knowledge_bases')
 export class KnowledgeBase {
@@ -29,16 +30,14 @@ export class KnowledgeBase {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
-  @ManyToMany(() => File, (f) => f.knowledgeBases)
-  @JoinTable({
-    name: 'knowledge_base_files',
-    joinColumn: {
-      name: 'knowledgeBaseId',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: { name: 'fileId', referencedColumnName: 'id' },
-  })
-  files!: File[];
+  @OneToMany(() => Folder, (f) => f.knowledgeBase)
+  folders!: Folder[];
+
+  @OneToMany(() => File, (f) => f.knowledgeBase)
+  kbFiles!: File[];
+
+  @OneToMany(() => Tag, (t) => t.knowledgeBase)
+  tags!: Tag[];
 
   @CreateDateColumn()
   createdAt!: Date;

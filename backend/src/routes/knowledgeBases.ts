@@ -1,11 +1,10 @@
 import { Router, Response } from 'express';
 import { AppDataSource } from '../utils/database';
-import { KnowledgeBase, File } from '../entities';
+import { KnowledgeBase } from '../entities';
 import { AuthRequest } from '../middleware/auth';
 
 const router = Router();
 const kbRepo = () => AppDataSource.getRepository(KnowledgeBase);
-const fileRepo = () => AppDataSource.getRepository(File);
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
@@ -44,7 +43,6 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const kb = await kbRepo().findOne({
       where: { id: req.params.id, userId: req.userId },
-      relations: ['files'],
     });
     if (!kb) {
       res.status(404).json({ error: 'Knowledge base not found' });
@@ -89,58 +87,6 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
     res.status(204).send();
   } catch (err) {
     console.error('Delete KB error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-router.post('/:id/files', async (req: AuthRequest, res: Response) => {
-  try {
-    const kb = await kbRepo().findOne({
-      where: { id: req.params.id, userId: req.userId },
-      relations: ['files'],
-    });
-    if (!kb) {
-      res.status(404).json({ error: 'Knowledge base not found' });
-      return;
-    }
-
-    const { fileIds } = req.body;
-    if (!Array.isArray(fileIds)) {
-      res.status(400).json({ error: 'fileIds array is required' });
-      return;
-    }
-
-    const files = await fileRepo().findByIds(fileIds);
-    for (const file of files) {
-      if (file.userId !== req.userId) continue;
-      if (!kb.files.some((f) => f.id === file.id)) {
-        kb.files.push(file);
-      }
-    }
-    await kbRepo().save(kb);
-    res.status(200).json({ ok: true });
-  } catch (err) {
-    console.error('Add files to KB error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-router.delete('/:id/files/:fileId', async (req: AuthRequest, res: Response) => {
-  try {
-    const kb = await kbRepo().findOne({
-      where: { id: req.params.id, userId: req.userId },
-      relations: ['files'],
-    });
-    if (!kb) {
-      res.status(404).json({ error: 'Knowledge base not found' });
-      return;
-    }
-
-    kb.files = kb.files.filter((f) => f.id !== req.params.fileId);
-    await kbRepo().save(kb);
-    res.status(204).send();
-  } catch (err) {
-    console.error('Remove file from KB error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -8,10 +8,10 @@ import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth';
 import conversationRoutes from './routes/conversations';
-import fileRoutes from './routes/files';
-import folderRoutes from './routes/folders';
-import tagRoutes from './routes/tags';
 import knowledgeBaseRoutes from './routes/knowledgeBases';
+import kbFolderRoutes from './routes/kbFolders';
+import kbFileRoutes from './routes/kbFiles';
+import kbTagRoutes from './routes/kbTags';
 
 async function main() {
   await initializeDatabase();
@@ -24,10 +24,10 @@ async function main() {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/conversations', authMiddleware, conversationRoutes);
-  app.use('/api/files', authMiddleware, fileRoutes);
-  app.use('/api/folders', authMiddleware, folderRoutes);
-  app.use('/api/tags', authMiddleware, tagRoutes);
   app.use('/api/knowledge-bases', authMiddleware, knowledgeBaseRoutes);
+  app.use('/api/knowledge-bases/:kbId/folders', authMiddleware, kbFolderRoutes);
+  app.use('/api/knowledge-bases/:kbId/files', authMiddleware, kbFileRoutes);
+  app.use('/api/knowledge-bases/:kbId/tags', authMiddleware, kbTagRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });

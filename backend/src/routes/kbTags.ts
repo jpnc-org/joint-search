@@ -3,13 +3,25 @@ import { AppDataSource } from '../utils/database';
 import { Tag } from '../entities';
 import { AuthRequest } from '../middleware/auth';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 const tagRepo = () => AppDataSource.getRepository(Tag);
+
+function validateKbId(req: AuthRequest, res: Response): string | null {
+  const kbId = req.params.kbId;
+  if (!kbId) {
+    res.status(400).json({ error: 'Knowledge base ID required' });
+    return null;
+  }
+  return kbId;
+}
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
+    const kbId = validateKbId(req, res);
+    if (!kbId) return;
+
     const tags = await tagRepo().find({
-      where: { userId: req.userId },
+      where: { userId: req.userId, knowledgeBaseId: kbId },
       order: { name: 'ASC' },
     });
     res.json(tags);
@@ -21,6 +33,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
+    const kbId = validateKbId(req, res);
+    if (!kbId) return;
+
     const { name, color } = req.body;
     if (!name) {
       res.status(400).json({ error: 'Name is required' });
@@ -29,6 +44,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
     const tag = tagRepo().create({
       userId: req.userId!,
+      knowledgeBaseId: kbId,
       name,
       color: color || '#6366f1',
     });
@@ -40,32 +56,15 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.patch('/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/:tagId', async (req: AuthRequest, res: Response) => {
   try {
-    const tag = await tagRepo().findOne({
-      where: { id: req.params.id, userId: req.userId },
-    });
-    if (!tag) {
-      res.status(404).json({ error: 'Tag not found' });
-      return;
-    }
+    const kbId = validateKbId(req, res);
+    if (!kbId) return;
 
-    if (req.body.name !== undefined) tag.name = req.body.name;
-    if (req.body.color !== undefined) tag.color = req.body.color;
-
-    await tagRepo().save(tag);
-    res.json(tag);
-  } catch (err) {
-    console.error('Update tag error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-router.delete('/:id', async (req: AuthRequest, res: Response) => {
-  try {
     const result = await tagRepo().delete({
-      id: req.params.id,
+      id: req.params.tagId,
       userId: req.userId,
+      knowledgeBaseId: kbId,
     });
     if (result.affected === 0) {
       res.status(404).json({ error: 'Tag not found' });

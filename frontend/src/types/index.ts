@@ -38,6 +38,7 @@ export interface FileMention {
 export interface FileItem {
   id: string;
   userId: string;
+  knowledgeBaseId: string;
   name: string;
   originalName: string;
   mimeType: string;
@@ -51,16 +52,16 @@ export interface FileItem {
 export interface Folder {
   id: string;
   userId: string;
+  knowledgeBaseId: string;
   name: string;
   parentId: string | null;
-  tags: Tag[];
-  files: FileItem[];
   createdAt: string;
 }
 
 export interface Tag {
   id: string;
   userId: string;
+  knowledgeBaseId: string;
   name: string;
   color: string;
   createdAt: string;
@@ -71,6 +72,5 @@ export interface KnowledgeBase {
   userId: string;
   name: string;
   description: string | null;
-  files: FileItem[];
   createdAt: string;
 }

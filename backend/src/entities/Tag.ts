@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { User } from './User';
 import { File } from './File';
-import { Folder } from './Folder';
+import { KnowledgeBase } from './KnowledgeBase';
 
 @Entity('tags')
 export class Tag {
@@ -23,6 +23,13 @@ export class Tag {
   @JoinColumn({ name: 'userId' })
   user!: User;
 
+  @Column({ type: 'uuid' })
+  knowledgeBaseId!: string;
+
+  @ManyToOne(() => KnowledgeBase, (kb) => kb.tags, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'knowledgeBaseId' })
+  knowledgeBase!: KnowledgeBase;
+
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 
@@ -31,9 +38,6 @@ export class Tag {
 
   @ManyToMany(() => File, (f) => f.tags)
   files!: File[];
-
-  @ManyToMany(() => Folder, (f) => f.tags)
-  folders!: Folder[];
 
   @CreateDateColumn()
   createdAt!: Date;

@@ -5,13 +5,10 @@ import {
   CreateDateColumn,
   ManyToOne,
   OneToMany,
-  ManyToMany,
-  JoinTable,
   JoinColumn,
 } from 'typeorm';
 import { User } from './User';
-import { File } from './File';
-import { Tag } from './Tag';
+import { KnowledgeBase } from './KnowledgeBase';
 
 @Entity('folders')
 export class Folder {
@@ -24,6 +21,13 @@ export class Folder {
   @ManyToOne(() => User, (u) => u.folders, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user!: User;
+
+  @Column({ type: 'uuid' })
+  knowledgeBaseId!: string;
+
+  @ManyToOne(() => KnowledgeBase, (kb) => kb.folders, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'knowledgeBaseId' })
+  knowledgeBase!: KnowledgeBase;
 
   @Column({ type: 'varchar', length: 255 })
   name!: string;
@@ -40,17 +44,6 @@ export class Folder {
 
   @OneToMany(() => Folder, (f) => f.parent)
   children!: Folder[];
-
-  @OneToMany(() => File, (f) => f.folder)
-  files!: File[];
-
-  @ManyToMany(() => Tag, (t) => t.folders)
-  @JoinTable({
-    name: 'folder_tags',
-    joinColumn: { name: 'folderId', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'tagId', referencedColumnName: 'id' },
-  })
-  tags!: Tag[];
 
   @CreateDateColumn()
   createdAt!: Date;

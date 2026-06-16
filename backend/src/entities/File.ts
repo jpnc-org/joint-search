@@ -25,6 +25,13 @@ export class File {
   @JoinColumn({ name: 'userId' })
   user!: User;
 
+  @Column({ type: 'uuid' })
+  knowledgeBaseId!: string;
+
+  @ManyToOne(() => KnowledgeBase, (kb) => kb.kbFiles, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'knowledgeBaseId' })
+  knowledgeBase!: KnowledgeBase;
+
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 
@@ -43,10 +50,7 @@ export class File {
   @Column({ type: 'uuid', nullable: true })
   folderId!: string | null;
 
-  @ManyToOne(() => Folder, (f) => f.files, {
-    onDelete: 'SET NULL',
-    nullable: true,
-  })
+  @ManyToOne(() => Folder, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'folderId' })
   folder!: Folder | null;
 
@@ -57,9 +61,6 @@ export class File {
     inverseJoinColumn: { name: 'tagId', referencedColumnName: 'id' },
   })
   tags!: Tag[];
-
-  @ManyToMany(() => KnowledgeBase, (kb) => kb.files)
-  knowledgeBases!: KnowledgeBase[];
 
   @CreateDateColumn()
   createdAt!: Date;
