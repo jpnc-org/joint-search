@@ -19,7 +19,7 @@ export default function LandingPage() {
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
-        baseOpacity={0.15}
+        baseOpacity={0.35}
         hoverDistance={0}
       />
       <FloatingSparkles
@@ -51,7 +51,7 @@ export default function LandingPage() {
 
         {/* Hero */}
         <section className="mx-auto flex max-w-5xl flex-col items-center px-6 pt-40 pb-32 text-center">
-          <h1 className="flex flex-wrap items-baseline justify-center gap-x-3 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="flex flex-wrap items-baseline justify-center gap-x-3 pb-2 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             <span>Stop guessing.</span>
             <span>Start</span>
             <WordRoll
