@@ -98,7 +98,7 @@ export default function KnowledgeBasePage() {
       <div className="mx-auto max-w-6xl p-6">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold">Knowledge Base</h1>
-          <Button onClick={() => navigate('/')} variant="secondary" size="sm">Back to Chat</Button>
+          <Button onClick={() => navigate('/chat')} variant="secondary" size="sm">Back to Chat</Button>
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

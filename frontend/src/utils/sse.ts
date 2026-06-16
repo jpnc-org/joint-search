@@ -1,7 +1,5 @@
-import { getAccessToken } from '../api/client';
-import type { FileMention } from '../types';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { getAccessToken } from '@/api/client';
+import type { FileMention } from '@/types';
 
 export async function streamChat(
   conversationId: string,
@@ -13,18 +11,15 @@ export async function streamChat(
 ) {
   const token = getAccessToken();
 
-  const response = await fetch(
-    `${API_URL}/api/conversations/${conversationId}/messages`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      credentials: 'include',
-      body: JSON.stringify({ content, fileMentions }),
-    }
-  );
+  const response = await fetch(`/api/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ content, fileMentions }),
+  });
 
   if (!response.ok) {
     onError(`HTTP ${response.status}`);

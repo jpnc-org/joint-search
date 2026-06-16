@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(null);
     setUser(null);
     api.post('/auth/logout').catch(() => {});
+    window.location.href = '/';
   };
 
   return (
