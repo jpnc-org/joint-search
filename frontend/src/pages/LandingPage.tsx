@@ -1,19 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import {
-  Upload, Tag, MessageSquare, ArrowRight, FileText, Layers,
+  ArrowRight, FileText, Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Rotator, GlassCard, Sparkle, GradientText,
-  EyebrowPill, Aurora, MockIDE,
+  EyebrowPill, NodeGraphBackground, FloatingSparkles,
+  BeforeAfter, SlippyWords, WordRoll,
 } from 'performative-ui';
 import { useAuth } from '@/contexts/AuthContext';
-
-const STEPS = [
-  { icon: Upload, title: 'Upload', desc: 'Drag and drop files into your knowledge base.' },
-  { icon: Tag, title: 'Tag', desc: 'Organize with folders and tags for quick reference.' },
-  { icon: MessageSquare, title: 'Chat', desc: 'Mention files, toggle capabilities, get answers.' },
-];
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -21,7 +16,18 @@ export default function LandingPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
-      <Aurora className="pointer-events-none absolute inset-0 h-full w-full opacity-40" />
+      <NodeGraphBackground
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        density={50}
+        baseOpacity={0.15}
+        hoverDistance={0}
+      />
+      <FloatingSparkles
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        count={14}
+        sizeRange={[8, 16]}
+        durationS={[12, 24]}
+      />
 
       <div className="relative z-10">
         {/* Nav */}
@@ -44,16 +50,14 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero */}
-        <section className="mx-auto flex max-w-4xl flex-col items-center px-6 pt-20 pb-24 text-center">
-          <div className="mb-6 text-lg text-muted-foreground">You can</div>
-
-          <h1 className="flex h-16 items-center justify-center text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            <GradientText>
-              <Rotator
-                words={['fact-check.', 'deep-research.', 'verify claims.', 'trace sources.']}
-                hideCursor={false}
-              />
-            </GradientText>
+        <section className="mx-auto flex max-w-4xl flex-col items-center px-6 pt-20 pb-16 text-center">
+          <h1 className="flex h-16 items-center justify-center gap-2 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+            <span>Ground every answer in</span>
+            <WordRoll
+              words={['evidence.', 'sources.', 'your documents.']}
+              gradient
+              intervalMs={2800}
+            />
           </h1>
 
           <p className="mt-6 max-w-xl text-balance text-lg text-muted-foreground">
@@ -71,43 +75,75 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* How it works */}
-        <section className="mx-auto max-w-4xl px-6 py-16">
-          <div className="mb-12 text-center">
-            <EyebrowPill className="mb-4">Workflow</EyebrowPill>
-            <h2 className="text-3xl font-bold tracking-tight">How it works</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {STEPS.map((step, i) => (
-              <div key={step.title} className="flex flex-col items-center text-center">
-                <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-secondary">
-                  <step.icon className="size-5 text-primary" />
-                </div>
-                <div className="mb-1 text-xs font-medium text-muted-foreground">Step {i + 1}</div>
-                <h3 className="font-semibold">{step.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{step.desc}</p>
-              </div>
-            ))}
-          </div>
+        {/* SlippyWords */}
+        <section className="py-8">
+          <SlippyWords
+            className="w-full"
+            intensity={120}
+            fade
+            rows={[
+              [
+                'Fact-Checking',
+                { label: 'Web Search', gradient: true },
+                'Document Analysis',
+                'RAG',
+                { label: 'Deep Research', gradient: true },
+                'Citations',
+                'Source Tracing',
+              ],
+              [
+                { label: 'Code Interpreter', gradient: true },
+                'File Mentions',
+                'Knowledge Base',
+                'Grounded Answers',
+                { label: 'No Hallucinations', gradient: true },
+                'Per-conversation Toggles',
+              ],
+            ]}
+          />
         </section>
 
-        {/* Code interpreter demo */}
+        {/* Before / After */}
         <section className="mx-auto max-w-4xl px-6 py-16">
-          <div className="mb-8 text-center">
-            <EyebrowPill className="mb-4">Code Interpreter</EyebrowPill>
-            <h2 className="text-3xl font-bold tracking-tight">Verify data with executable code</h2>
-            <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
-              Run calculations, generate charts, and test hypotheses directly in chat.
-            </p>
+          <div className="mb-10 text-center">
+            <EyebrowPill icon={false} className="mb-4">The difference</EyebrowPill>
+            <h2 className="text-3xl font-bold tracking-tight">
+              Stop guessing. Start{' '}
+              <GradientText>
+                <Rotator
+                  words={['verifying.', 'fact-checking.', 'tracing sources.']}
+                  hideCursor={false}
+                />
+              </GradientText>
+            </h2>
           </div>
-          <MockIDE className="rounded-xl" />
+
+          <BeforeAfter
+            beforeLabel="Without DeepResearch"
+            afterLabel="With DeepResearch"
+            brand="DeepResearch"
+            before={[
+              'LLM might hallucinate facts',
+              'No citations or source links',
+              'Information may be outdated',
+              'No way to verify claims',
+            ]}
+            after={[
+              'Every claim cross-checked against your documents',
+              'Inline citations you can click through',
+              'Live web search fills knowledge gaps',
+              'Fact-check verdicts on every statement',
+            ]}
+          />
         </section>
 
         {/* Knowledge base section */}
         <section className="mx-auto max-w-5xl px-6 py-16">
           <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2">
             <div>
-              <EyebrowPill className="mb-4"><Layers className="size-5" /> Knowledge Base</EyebrowPill>
+              <EyebrowPill icon={false} className="mb-4">
+                <Layers className="size-5" /> Knowledge Base
+              </EyebrowPill>
               <h2 className="text-2xl font-bold tracking-tight">
                 Organize your research, not just consume it
               </h2>
