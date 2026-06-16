@@ -1,82 +1,95 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { FolderPlus, FileUp, Trash2, Folder as FolderIcon, FileText, ChevronRight } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, FolderPlus, FileUp, Trash2, Folder as FolderIcon, FileText, ChevronRight, Plus } from 'lucide-react';
 import api from '@/api/client';
 import type { FileItem, Folder, Tag, KnowledgeBase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 export default function KnowledgeBasePage() {
+  const { knowledgeBaseId, folderId } = useParams<{ knowledgeBaseId?: string; folderId?: string }>();
+  const navigate = useNavigate();
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
-  const [activeKBId, setActiveKBId] = useState<string | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [breadcrumbPath, setBreadcrumbPath] = useState<{ id: string; name: string }[]>([]);
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#6366f1');
   const [newFolderName, setNewFolderName] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newKBName, setNewKBName] = useState('');
   const [newKBDesc, setNewKBDesc] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const activeKBId = knowledgeBaseId ?? null;
+  const activeFolderId = folderId ?? null;
 
   const loadKBs = useCallback(async () => {
     const { data } = await api.get('/knowledge-bases');
     setKnowledgeBases(data);
     if (data.length > 0 && !activeKBId) {
-      setActiveKBId(data[0].id);
+      navigate(`/knowledge-base/${data[0].id}`, { replace: true });
     }
-  }, []);
+  }, [activeKBId, navigate]);
 
-  useEffect(() => { loadKBs(); }, [loadKBs]);
+  useEffect(() => { loadKBs(); }, []);
 
   const loadKBContent = useCallback(async () => {
     if (!activeKBId) return;
-    const [fRes, tRes] = await Promise.all([
-      api.get(`/knowledge-bases/${activeKBId}/folders`),
-      api.get(`/knowledge-bases/${activeKBId}/tags`),
-    ]);
-    setFolders(fRes.data);
-    setTags(tRes.data);
-    setFiles([]);
-    setBreadcrumbPath([]);
-    setActiveFolderId(null);
-  }, [activeKBId]);
-
-  useEffect(() => { loadKBContent(); }, [loadKBContent]);
-
-  const navigateToFolder = async (folderId: string | null) => {
-    if (!activeKBId) return;
-    if (folderId === null) {
-      const [fRes] = await Promise.all([
+    if (!activeFolderId) {
+      const [fRes, tRes] = await Promise.all([
         api.get(`/knowledge-bases/${activeKBId}/folders`),
+        api.get(`/knowledge-bases/${activeKBId}/tags`),
       ]);
       setFolders(fRes.data);
+      setTags(tRes.data);
       setFiles([]);
       setBreadcrumbPath([]);
-      setActiveFolderId(null);
       return;
     }
-    const [folderRes, childrenRes, filesRes] = await Promise.all([
-      api.get(`/knowledge-bases/${activeKBId}/folders/${folderId}`),
-      api.get(`/knowledge-bases/${activeKBId}/folders/${folderId}/children`),
-      api.get(`/knowledge-bases/${activeKBId}/folders/${folderId}/files`),
+    const [tRes, folderRes, childrenRes, filesRes] = await Promise.all([
+      api.get(`/knowledge-bases/${activeKBId}/tags`),
+      api.get(`/knowledge-bases/${activeKBId}/folders/${activeFolderId}`),
+      api.get(`/knowledge-bases/${activeKBId}/folders/${activeFolderId}/children`),
+      api.get(`/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files`),
     ]);
+    setTags(tRes.data);
     setBreadcrumbPath(folderRes.data.path);
     setFolders(childrenRes.data);
     setFiles(filesRes.data);
-    setActiveFolderId(folderId);
+  }, [activeKBId, activeFolderId]);
+
+  useEffect(() => { loadKBContent(); }, [loadKBContent]);
+
+  const selectKB = (id: string) => {
+    navigate(`/knowledge-base/${id}`);
+  };
+
+  const navigateToFolder = (targetFolderId: string | null) => {
+    if (!activeKBId) return;
+    if (targetFolderId === null) {
+      navigate(`/knowledge-base/${activeKBId}`);
+    } else {
+      navigate(`/knowledge-base/${activeKBId}/folder/${targetFolderId}`);
+    }
   };
 
   const createKB = async () => {
@@ -84,12 +97,13 @@ export default function KnowledgeBasePage() {
     const tempId = crypto.randomUUID();
     const optimisticKB: KnowledgeBase = { id: tempId, userId: '', name: newKBName, description: newKBDesc || null, createdAt: new Date().toISOString() };
     setKnowledgeBases((prev) => [optimisticKB, ...prev]);
+    setShowCreateDialog(false);
     setNewKBName('');
     setNewKBDesc('');
     try {
       const { data } = await api.post('/knowledge-bases', { name: optimisticKB.name, description: optimisticKB.description });
       setKnowledgeBases((prev) => prev.map((kb) => (kb.id === tempId ? data : kb)));
-      setActiveKBId(data.id);
+      navigate(`/knowledge-base/${data.id}`, { replace: true });
     } catch {
       setKnowledgeBases((prev) => prev.filter((kb) => kb.id !== tempId));
     }
@@ -99,7 +113,12 @@ export default function KnowledgeBasePage() {
     const prev = knowledgeBases;
     setKnowledgeBases((prev.filter((kb) => kb.id !== id)));
     if (activeKBId === id) {
-      setActiveKBId(prev.length > 1 ? prev.find((kb) => kb.id !== id)!.id : null);
+      const remaining = prev.filter((kb) => kb.id !== id);
+      if (remaining.length > 0) {
+        navigate(`/knowledge-base/${remaining[0].id}`, { replace: true });
+      } else {
+        navigate('/knowledge-base', { replace: true });
+      }
     }
     try {
       await api.delete(`/knowledge-bases/${id}`);
@@ -214,74 +233,75 @@ export default function KnowledgeBasePage() {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar: KB switcher + Tags */}
+      {/* Sidebar: Tags */}
       <div className="flex w-64 shrink-0 flex-col border-r border-border">
-        <div className="p-3 space-y-2">
-          <h2 className="px-1 text-xs font-medium text-muted-foreground">Knowledge Bases</h2>
-          <div className="space-y-1">
-            {knowledgeBases.map((kb) => (
-              <button
-                key={kb.id}
-                onClick={() => setActiveKBId(kb.id)}
-                className={cn(
-                  "group flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors cursor-pointer",
-                  kb.id === activeKBId
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
-                )}
-              >
-                <span className="truncate">{kb.name}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteKB(kb.id); }}
-                  className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer"
-                >
-                  <Trash2 className="size-3" />
-                </button>
-              </button>
-            ))}
-          </div>
-          {knowledgeBases.length === 0 && (
-            <p className="px-1 py-4 text-center text-xs text-muted-foreground">
-              You have not created a knowledge base yet.
-            </p>
-          )}
-          <Separator />
-          <div className="space-y-1.5">
-            <Input value={newKBName} onChange={(e) => setNewKBName(e.target.value)} placeholder="New KB name" className="h-8 text-xs" />
-            <Input value={newKBDesc} onChange={(e) => setNewKBDesc(e.target.value)} placeholder="Description (optional)" className="h-8 text-xs" />
-            <Button onClick={createKB} size="sm" className="w-full cursor-pointer">Create KB</Button>
-          </div>
-        </div>
         {activeKBId && (
-          <>
-            <Separator />
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              <h2 className="px-1 text-xs font-medium text-muted-foreground">Tags</h2>
-              <div className="flex items-center gap-1.5">
-                <input type="color" value={newTagColor} onChange={(e) => setNewTagColor(e.target.value)} className="size-7 cursor-pointer rounded border-0 bg-transparent" />
-                <Input value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Tag name" className="h-7 text-xs" />
-                <Button onClick={createTag} size="sm" className="h-7 px-2 cursor-pointer">Add</Button>
-              </div>
-              <div className="space-y-1">
-                {tags.map((tag) => (
-                  <div key={tag.id} className="flex items-center justify-between rounded-md bg-secondary px-2 py-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="size-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                      <span className="text-xs">{tag.name}</span>
-                    </div>
-                    <button onClick={() => deleteTag(tag.id)} className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer">
-                      <Trash2 className="size-2.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <h2 className="px-1 text-xs font-medium text-muted-foreground">Tags</h2>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="color"
+                value={newTagColor}
+                onChange={(e) => setNewTagColor(e.target.value)}
+                className="size-7 cursor-pointer rounded-full border-0 bg-transparent"
+              />
+              <Input value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Tag name" className="h-7 text-xs" />
+              <Button onClick={createTag} size="sm" className="h-7 px-2 cursor-pointer">Add</Button>
             </div>
-          </>
+            <div className="space-y-1">
+              {tags.map((tag) => (
+                <div key={tag.id} className="flex items-center justify-between rounded-md bg-secondary px-2 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                    <span className="text-xs">{tag.name}</span>
+                  </div>
+                  <button onClick={() => deleteTag(tag.id)} className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer">
+                    <Trash2 className="size-2.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
       {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0">
+        {/* Header bar with knowledge base switcher */}
+        <div className="flex items-center gap-3 border-b px-4 py-2.5">
+          <Button onClick={() => navigate('/chat')} variant="ghost" size="icon" className="size-8 shrink-0 cursor-pointer">
+            <ArrowLeft className="size-4" />
+          </Button>
+          <Select
+            value={activeKBId ?? ''}
+            onValueChange={selectKB}
+          >
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Select a knowledge base" />
+            </SelectTrigger>
+            <SelectContent>
+              {knowledgeBases.map((kb) => (
+                <SelectItem key={kb.id} value={kb.id}>
+                  <span>{kb.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setShowCreateDialog(true)} variant="outline" size="sm" className="cursor-pointer">
+            <Plus className="size-3.5" /> New Knowledge Base
+          </Button>
+          {activeKBId && (
+            <Button
+              onClick={() => deleteKB(activeKBId)}
+              variant="ghost"
+              size="sm"
+              className="ml-auto text-destructive cursor-pointer"
+            >
+              <Trash2 className="size-3.5" /> Delete
+            </Button>
+          )}
+        </div>
+
         {!activeKBId ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-muted-foreground">Select or create a knowledge base.</p>
@@ -289,7 +309,7 @@ export default function KnowledgeBasePage() {
         ) : (
           <>
             {/* Breadcrumbs */}
-            <div className="flex items-center gap-1 border-b px-4 py-2.5 text-sm">
+            <div className="flex items-center gap-1 border-b px-4 py-2 text-sm">
               <button onClick={() => navigateToFolder(null)} className="text-primary hover:underline cursor-pointer">
                 {knowledgeBases.find((kb) => kb.id === activeKBId)?.name}
               </button>
@@ -362,14 +382,17 @@ export default function KnowledgeBasePage() {
                         <div className="flex min-w-0 items-center gap-2">
                           <FileText className="size-4 shrink-0 text-primary" />
                           <span className="truncate text-sm">{file.originalName}</span>
-                          <span className="shrink-0 text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)}KB</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</span>
                           {file.tags.map((tag) => (
-                            <Badge key={tag.id} className="shrink-0 text-xs" style={{ backgroundColor: tag.color }}>{tag.name}</Badge>
+                            <span key={tag.id} className="inline-flex shrink-0 items-center gap-1.5 text-xs">
+                              <span className="size-2 rounded-full border border-white" style={{ backgroundColor: tag.color }} />
+                              {tag.name}
+                            </span>
                           ))}
                         </div>
                         <div className="flex shrink-0 items-center gap-1 pl-2">
                           <Select onValueChange={(v) => addTagToFile(file.id, v)}>
-                            <SelectTrigger className="h-7 w-[80px] text-xs"><span className="text-muted-foreground">+Tag</span></SelectTrigger>
+                            <SelectTrigger className="h-7 w-[80px] text-xs"><span className="text-muted-foreground">+ Tag</span></SelectTrigger>
                             <SelectContent>
                               {tags.map((tag) => <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>)}
                             </SelectContent>
@@ -390,6 +413,40 @@ export default function KnowledgeBasePage() {
           </>
         )}
       </div>
+
+      {/* Create Knowledge Base Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Knowledge Base</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="kb-name">Name</Label>
+              <Input
+                id="kb-name"
+                value={newKBName}
+                onChange={(e) => setNewKBName(e.target.value)}
+                placeholder="e.g. Research Papers"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="kb-desc">Description (optional)</Label>
+              <Input
+                id="kb-desc"
+                value={newKBDesc}
+                onChange={(e) => setNewKBDesc(e.target.value)}
+                placeholder="What is this knowledge base for?"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="cursor-pointer">Cancel</Button>
+            <Button onClick={createKB} disabled={!newKBName.trim()} className="cursor-pointer">Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

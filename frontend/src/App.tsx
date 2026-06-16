@@ -39,6 +39,8 @@ export default function App() {
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
           <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
           <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
+          <Route path="/knowledge-base/:knowledgeBaseId" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
+          <Route path="/knowledge-base/:knowledgeBaseId/folder/:folderId" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
