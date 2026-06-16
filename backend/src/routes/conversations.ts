@@ -9,10 +9,14 @@ const msgRepo = () => AppDataSource.getRepository(Message);
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const conversations = await convRepo().find({
-      where: { userId: req.userId },
-      order: { updatedAt: 'DESC' },
-    });
+    const q = req.query.q as string | undefined;
+    const qb = convRepo().createQueryBuilder('conv')
+      .where('conv.userId = :userId', { userId: req.userId })
+      .orderBy('conv.updatedAt', 'DESC');
+    if (q) {
+      qb.andWhere('conv.title ILIKE :q', { q: `%${q}%` });
+    }
+    const conversations = await qb.getMany();
     res.json(conversations);
   } catch (err) {
     console.error('List conversations error:', err);

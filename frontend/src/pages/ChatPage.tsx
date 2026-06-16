@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles } from 'lucide-react';
+import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search } from 'lucide-react';
 import api from '@/api/client';
 import { streamChat } from '@/utils/sse';
 import type { Conversation, Message, Capabilities } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -24,6 +25,7 @@ export default function ChatPage() {
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [capabilities, setCapabilities] = useState<Capabilities>({
     code_interpreter: false, rlm: false, rag: false, web_search: false,
@@ -34,11 +36,13 @@ export default function ChatPage() {
   const navigate = useNavigate();
 
   useEffect(() => { loadConversations(); }, []);
+  useEffect(() => { loadConversations(); }, [searchQuery]);
   useEffect(() => { if (activeConvId) loadMessages(activeConvId); }, [activeConvId]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const loadConversations = async () => {
-    const { data } = await api.get('/conversations');
+    const params = searchQuery ? { q: searchQuery } : {};
+    const { data } = await api.get('/conversations', { params });
     setConversations(data);
     if (data.length > 0 && !activeConvId) {
       setActiveConvId(data[0].id);
@@ -107,7 +111,16 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen bg-background">
       <div className="flex w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border">
-        <div className="p-3">
+        <div className="p-3 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search chats..."
+              className="h-8 pl-8 text-xs"
+            />
+          </div>
           <Button onClick={createConversation} className="w-full cursor-pointer" size="sm">
             <Plus className="size-4" /> New Chat
           </Button>
@@ -163,7 +176,7 @@ export default function ChatPage() {
         <div className="flex items-center gap-2 border-b px-4 py-2.5">
           {(Object.keys(CAP_LABELS) as (keyof Capabilities)[]).map((cap) => {
             const on = capabilities[cap];
-            return (
+  return (
               <button
                 key={cap}
                 onClick={() => {
