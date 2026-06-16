@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search, ChevronRight } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { ChatBubble } from 'performative-ui';
 
@@ -27,7 +28,10 @@ export default function ChatPage() {
   const [activeConvId, setActiveConvId] = useState<string | null>(conversationId ?? null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<Conversation[]>([]);
+  const [searchText, setSearchText] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [streaming, setStreaming] = useState(false);
   const [capabilities, setCapabilities] = useState<Capabilities>({
     code_interpreter: false, rlm: false, rag: false, web_search: false,
@@ -38,19 +42,23 @@ export default function ChatPage() {
   const navigate = useNavigate();
 
   useEffect(() => { loadConversations(); }, []);
-  useEffect(() => { loadConversations(); }, [searchQuery]);
   useEffect(() => { if (activeConvId) loadMessages(activeConvId); }, [activeConvId]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const loadConversations = async () => {
-    const params = searchQuery ? { q: searchQuery } : {};
-    const { data } = await api.get('/conversations', { params });
+    const { data } = await api.get('/conversations');
     setConversations(data);
     if (conversationId && conversationId === activeConvId) {
       const conv = data.find((c: Conversation) => c.id === conversationId);
       if (conv) setCapabilities(conv.capabilities);
     }
   };
+
+  const searchConversations = useCallback(async (q: string) => {
+    if (!q.trim()) { setSearchResults([]); return; }
+    const { data } = await api.get('/conversations', { params: { q } });
+    setSearchResults(data);
+  }, []);
 
   const loadMessages = async (convId: string) => {
     const { data } = await api.get(`/conversations/${convId}/messages`);
@@ -143,15 +151,9 @@ export default function ChatPage() {
     <div className="flex h-screen bg-background">
       <div className="flex w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border">
         <div className="p-3 space-y-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search chats..."
-              className="h-8 pl-8 text-xs"
-            />
-          </div>
+          <Button onClick={() => { setSearchOpen(true); setSearchText(''); setSearchResults([]); setTimeout(() => searchInputRef.current?.focus(), 50); }} variant="outline" className="w-full cursor-pointer" size="sm">
+            <Search className="size-3.5" /> Search
+          </Button>
           <Button onClick={resetChat} className="w-full cursor-pointer" size="sm">
             <Plus className="size-4" /> New Chat
           </Button>
@@ -290,6 +292,43 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Search Chats</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              ref={searchInputRef}
+              placeholder="Search by title or message content..."
+              value={searchText}
+              onChange={(e) => { setSearchText(e.target.value); searchConversations(e.target.value); }}
+            />
+            <div className="max-h-[300px] space-y-1 overflow-y-auto">
+              {searchResults.map((conv) => (
+                <button
+                  key={conv.id}
+                  onClick={() => {
+                    setActiveConvId(conv.id);
+                    setCapabilities(conv.capabilities);
+                    navigate(`/chat/${conv.id}`);
+                    setSearchOpen(false);
+                    setSearchText('');
+                    setSearchResults([]);
+                  }}
+                  className="w-full truncate rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent cursor-pointer"
+                >
+                  {conv.title}
+                </button>
+              ))}
+              {searchResults.length === 0 && searchText && (
+                <p className="px-3 py-4 text-center text-sm text-muted-foreground">No results found.</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -14,7 +14,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       .where('conv.userId = :userId', { userId: req.userId })
       .orderBy('conv.updatedAt', 'DESC');
     if (q) {
-      qb.andWhere('conv.title ILIKE :q', { q: `%${q}%` });
+      qb.andWhere(
+        `(conv.title ILIKE :q OR EXISTS (SELECT 1 FROM messages m WHERE m.conversationId = conv.id AND m.content ILIKE :q))`,
+        { q: `%${q}%` }
+      );
     }
     const conversations = await qb.getMany();
     res.json(conversations);
