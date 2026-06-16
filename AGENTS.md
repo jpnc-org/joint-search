@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## Nested Instructions
+
+Some subdirectories include their own `AGENTS.md` files with additional
+instructions for that area. Check for and follow the nearest applicable
+`AGENTS.md` before changing files in a subdirectory.
+
 ## Workflow
 
 Agents must use test-driven development for code changes:
