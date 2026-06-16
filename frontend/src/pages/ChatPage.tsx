@@ -45,10 +45,6 @@ export default function ChatPage() {
     const params = searchQuery ? { q: searchQuery } : {};
     const { data } = await api.get('/conversations', { params });
     setConversations(data);
-    if (data.length > 0 && !activeConvId) {
-      setActiveConvId(data[0].id);
-      setCapabilities(data[0].capabilities);
-    }
   };
 
   const loadMessages = async (convId: string) => {
@@ -56,12 +52,10 @@ export default function ChatPage() {
     setMessages(data);
   };
 
-  const createConversation = async () => {
-    const { data } = await api.post('/conversations', { title: 'New Conversation' });
-    setConversations((prev) => [data, ...prev]);
-    setActiveConvId(data.id);
-    setCapabilities(data.capabilities);
+  const resetChat = () => {
+    setActiveConvId(null);
     setMessages([]);
+    setCapabilities({ code_interpreter: false, rlm: false, rag: false, web_search: false });
     inputRef.current?.focus();
   };
 
@@ -75,38 +69,52 @@ export default function ChatPage() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !activeConvId || streaming) return;
+    if (!input.trim() || streaming) return;
     const content = input.trim();
     setInput('');
-
-    const userMsg: Message = {
-      id: uuid(), conversationId: activeConvId, role: 'user',
-      content, metadata: null, createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
     setStreaming(true);
-    let assistantContent = '';
 
-    await streamChat(activeConvId, content, [],
-      (token) => {
-        assistantContent += token;
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === 'assistant') {
-            return [...prev.slice(0, -1), { ...last, content: assistantContent }];
-          }
-          return [...prev, {
-            id: 'streaming', conversationId: activeConvId!, role: 'assistant' as const,
-            content: assistantContent, metadata: null, createdAt: new Date().toISOString(),
-          }];
-        });
-      },
-      (messageId) => {
-        setMessages((prev) => prev.map((m) => (m.id === 'streaming' ? { ...m, id: messageId } : m)));
-        setStreaming(false);
-      },
-      () => { setStreaming(false); }
-    );
+    try {
+      let convId: string;
+      if (activeConvId) {
+        convId = activeConvId;
+      } else {
+        const { data: newConv } = await api.post('/conversations', { title: content.slice(0, 80) });
+        setConversations((prev) => [newConv, ...prev]);
+        convId = newConv.id;
+        setActiveConvId(convId);
+        setCapabilities(newConv.capabilities);
+      }
+
+      const userMsg: Message = {
+        id: uuid(), conversationId: convId, role: 'user',
+        content, metadata: null, createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      let assistantContent = '';
+
+      await streamChat(convId, content, [],
+        (token) => {
+          assistantContent += token;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'assistant') {
+              return [...prev.slice(0, -1), { ...last, content: assistantContent }];
+            }
+            return [...prev, {
+              id: 'streaming', conversationId: convId!, role: 'assistant' as const,
+              content: assistantContent, metadata: null, createdAt: new Date().toISOString(),
+            }];
+          });
+        },
+        (messageId) => {
+          setMessages((prev) => prev.map((m) => (m.id === 'streaming' ? { ...m, id: messageId } : m)));
+        },
+        (error) => { console.error('Stream error:', error); }
+      );
+    } finally {
+      setStreaming(false);
+    }
   };
 
   return (
@@ -122,7 +130,7 @@ export default function ChatPage() {
               className="h-8 pl-8 text-xs"
             />
           </div>
-          <Button onClick={createConversation} className="w-full cursor-pointer" size="sm">
+          <Button onClick={resetChat} className="w-full cursor-pointer" size="sm">
             <Plus className="size-4" /> New Chat
           </Button>
         </div>
