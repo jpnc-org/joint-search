@@ -7,7 +7,7 @@ from typing import Protocol
 
 from dotenv import load_dotenv
 
-from agents.registry import DEFAULT_LANGGRAPH_MODEL, AgentType, Registry
+from agents.band.registry import DEFAULT_LANGGRAPH_MODEL, AgentType, Registry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
