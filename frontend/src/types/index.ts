@@ -75,3 +75,12 @@ export interface KnowledgeBase {
   description: string | null;
   createdAt: string;
 }
+
+export interface SearchResult {
+  messageId: string;
+  content: string;
+  role: 'user' | 'assistant' | 'system';
+  messageCreatedAt: string;
+  conversationId: string;
+  conversationTitle: string;
+}

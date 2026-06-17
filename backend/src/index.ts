@@ -8,6 +8,7 @@ import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth';
 import conversationRoutes from './routes/conversations';
+import searchRoutes from './routes/search';
 import knowledgeBaseRoutes from './routes/knowledgeBases';
 import kbFolderRoutes from './routes/kbFolders';
 import kbFileRoutes from './routes/kbFiles';
@@ -24,6 +25,7 @@ async function main() {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/conversations', authMiddleware, conversationRoutes);
+  app.use('/api/search', authMiddleware, searchRoutes);
   app.use('/api/knowledge-bases', authMiddleware, knowledgeBaseRoutes);
   app.use('/api/knowledge-bases/:kbId/folders', authMiddleware, kbFolderRoutes);
   app.use('/api/knowledge-bases/:kbId/files', authMiddleware, kbFileRoutes);

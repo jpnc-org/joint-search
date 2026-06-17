@@ -4,7 +4,7 @@ import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search, ChevronRigh
 import { v4 as uuid } from 'uuid';
 import api from '@/api/client';
 import { streamChat } from '@/utils/sse';
-import type { Conversation, Message, Capabilities } from '@/types';
+import type { Conversation, Message, Capabilities, SearchResult } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,8 +29,10 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<Conversation[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null);
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [streaming, setStreaming] = useState(false);
   const [capabilities, setCapabilities] = useState<Capabilities>({
@@ -44,6 +46,18 @@ export default function ChatPage() {
   useEffect(() => { loadConversations(); }, []);
   useEffect(() => { if (activeConvId) loadMessages(activeConvId); }, [activeConvId]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => {
+    if (highlightMessageId && messages.length > 0) {
+      const timer = setTimeout(() => {
+        const el = messageRefs.current.get(highlightMessageId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      const clearTimer = setTimeout(() => setHighlightMessageId(null), 3000);
+      return () => { clearTimeout(timer); clearTimeout(clearTimer); };
+    }
+  }, [highlightMessageId, messages]);
 
   const loadConversations = async () => {
     const { data } = await api.get('/conversations');
@@ -54,9 +68,20 @@ export default function ChatPage() {
     }
   };
 
+  const highlightMatch = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === query.toLowerCase()
+        ? <mark key={i} className="bg-yellow-500/30 text-foreground rounded-sm px-0.5">{part}</mark>
+        : part
+    );
+  };
+
   const searchConversations = useCallback(async (q: string) => {
     if (!q.trim()) { setSearchResults([]); return; }
-    const { data } = await api.get('/conversations', { params: { q } });
+    const { data } = await api.get('/search', { params: { q } });
     setSearchResults(data);
   }, []);
 
@@ -244,12 +269,20 @@ export default function ChatPage() {
               </div>
             )}
             {messages.map((msg) => (
-              msg.role === 'user' ? (
-                <ChatBubble key={msg.id} role="user">
+              <div
+                key={msg.id}
+                ref={(el) => { if (el) messageRefs.current.set(msg.id, el); }}
+                className={cn(
+                  "transition-colors duration-500 rounded-lg",
+                  highlightMessageId === msg.id && "bg-primary/10 ring-1 ring-primary/30"
+                )}
+              >
+              {msg.role === 'user' ? (
+                <ChatBubble role="user">
                   {msg.content}
                 </ChatBubble>
               ) : (
-                <ChatBubble key={msg.id} role="ai" agent="DeepResearch" thinking={streaming && msg.id === 'streaming' && !msg.content ? 'thinking...' : false}>
+                <ChatBubble role="ai" agent="DeepResearch" thinking={streaming && msg.id === 'streaming' && !msg.content ? 'thinking...' : false}>
                   {msg.reasoning && (
                     <details className="mb-2 text-xs text-muted-foreground">
                       <summary className="flex cursor-pointer items-center gap-1 select-none hover:text-foreground transition-colors [&::-webkit-details-marker]:hidden">
@@ -261,7 +294,8 @@ export default function ChatPage() {
                   )}
                   {msg.content}
                 </ChatBubble>
-              )
+              )}
+              </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -294,32 +328,48 @@ export default function ChatPage() {
       </div>
 
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Search Chats</DialogTitle>
+            <DialogTitle>Search Messages</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <Input
               ref={searchInputRef}
-              placeholder="Search by title or message content..."
+              placeholder="Search across all messages..."
               value={searchText}
               onChange={(e) => { setSearchText(e.target.value); searchConversations(e.target.value); }}
             />
-            <div className="max-h-[300px] space-y-1 overflow-y-auto">
-              {searchResults.map((conv) => (
+            <div className="max-h-[400px] space-y-1 overflow-y-auto">
+              {searchResults.map((result) => (
                 <button
-                  key={conv.id}
+                  key={result.messageId}
                   onClick={() => {
-                    setActiveConvId(conv.id);
-                    setCapabilities(conv.capabilities);
-                    navigate(`/chat/${conv.id}`);
+                    setHighlightMessageId(result.messageId);
+                    if (activeConvId !== result.conversationId) {
+                      setActiveConvId(result.conversationId);
+                      navigate(`/chat/${result.conversationId}`);
+                    } else {
+                      const el = messageRefs.current.get(result.messageId);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      setHighlightMessageId(result.messageId);
+                      setTimeout(() => setHighlightMessageId(null), 3000);
+                    }
                     setSearchOpen(false);
                     setSearchText('');
                     setSearchResults([]);
                   }}
-                  className="w-full truncate rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent cursor-pointer"
+                  className="w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent cursor-pointer space-y-1"
                 >
-                  {conv.title}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="truncate font-medium">{result.conversationTitle}</span>
+                    <span>·</span>
+                    <span className={cn("shrink-0", result.role === 'user' ? "text-blue-400" : "text-purple-400")}>
+                      {result.role === 'user' ? 'You' : 'AI'}
+                    </span>
+                  </div>
+                  <p className="line-clamp-2 text-foreground">
+                    {highlightMatch(result.content, searchText)}
+                  </p>
                 </button>
               ))}
               {searchResults.length === 0 && searchText && (
