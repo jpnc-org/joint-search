@@ -268,21 +268,18 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                ref={(el) => { if (el) messageRefs.current.set(msg.id, el); }}
-                className={cn(
-                  "transition-colors duration-500 rounded-lg",
-                  highlightMessageId === msg.id && "bg-primary/10 ring-1 ring-primary/30"
-                )}
-              >
-              {msg.role === 'user' ? (
-                <ChatBubble role="user">
+            {messages.map((msg) => {
+              const hlClass = highlightMessageId === msg.id ? 'animate-highlight' : undefined;
+              const setRef = (el: HTMLDivElement | null) => {
+                if (el) messageRefs.current.set(msg.id, el);
+                else messageRefs.current.delete(msg.id);
+              };
+              return msg.role === 'user' ? (
+                <ChatBubble key={msg.id} ref={setRef} role="user" className={hlClass}>
                   {msg.content}
                 </ChatBubble>
               ) : (
-                <ChatBubble role="ai" agent="DeepResearch" thinking={streaming && msg.id === 'streaming' && !msg.content ? 'thinking...' : false}>
+                <ChatBubble key={msg.id} ref={setRef} role="ai" agent="DeepResearch" className={hlClass} thinking={streaming && msg.id === 'streaming' && !msg.content ? 'thinking...' : false}>
                   {msg.reasoning && (
                     <details className="mb-2 text-xs text-muted-foreground">
                       <summary className="flex cursor-pointer items-center gap-1 select-none hover:text-foreground transition-colors [&::-webkit-details-marker]:hidden">
@@ -294,9 +291,8 @@ export default function ChatPage() {
                   )}
                   {msg.content}
                 </ChatBubble>
-              )}
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         </div>
