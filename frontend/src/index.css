@@ -106,9 +106,10 @@ body {
 
 @keyframes highlight-fade {
   0% { background-color: oklch(0.6 0.2 277 / 0.15); box-shadow: 0 0 0 2px oklch(0.6 0.2 277 / 0.3); }
+  50% { background-color: oklch(0.6 0.2 277 / 0.15); box-shadow: 0 0 0 2px oklch(0.6 0.2 277 / 0.3); }
   100% { background-color: transparent; box-shadow: 0 0 0 0px transparent; }
 }
 
 .animate-highlight {
-  animation: highlight-fade 4s ease-out forwards;
+  animation: highlight-fade 5s ease-out forwards;
 }
