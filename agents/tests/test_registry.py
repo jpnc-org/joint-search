@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from pytest import MonkeyPatch
 
-from agents.registry import (
+from agents.band.registry import (
     AgentDefinition,
     AgentEntry,
     AgentType,
@@ -35,6 +35,29 @@ def test_registry_exposes_only_start_agent_for_execution_lifecycle() -> None:
     assert not hasattr(registry, "execute_agent")
     assert not hasattr(registry, "stop_agent")
     assert not hasattr(registry, "_run_agent")
+
+
+def test_registry_constructor_does_not_load_dotenv(monkeypatch: MonkeyPatch) -> None:
+    def fake_load_dotenv() -> None:
+        raise AssertionError("dotenv should be loaded by main, not Registry")
+
+    monkeypatch.setenv("BAND_WS_URL", "wss://example.test/socket")
+    monkeypatch.setenv("BAND_REST_URL", "https://example.test")
+    monkeypatch.setattr(
+        "agents.band.registry.load_dotenv",
+        fake_load_dotenv,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        Registry,
+        "_load_agent_definitions",
+        lambda self: {},
+    )
+
+    registry = Registry()
+
+    assert registry._ws_url == "wss://example.test/socket"
+    assert registry._rest_url == "https://example.test"
 
 
 def test_agent_type_values_are_domain_categories() -> None:
@@ -139,7 +162,7 @@ agent_b:
         return (f"{agent_key}-from-sdk-id", f"{agent_key}-from-sdk-key")
 
     monkeypatch.setattr(
-        "agents.registry.load_agent_config",
+        "agents.band.registry.load_agent_config",
         fake_load_agent_config,
     )
 
@@ -220,7 +243,7 @@ def test_start_agent_builds_and_runs_langgraph_agent_in_background(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     async def scenario() -> None:
-        caplog.set_level(logging.INFO, logger="agents.registry")
+        caplog.set_level(logging.INFO, logger="agents.band.registry")
         registry = build_registry_without_loading_config()
         registry._agent_registry["agent_a"] = AgentEntry(
             agent_definition=AgentDefinition(
@@ -265,12 +288,14 @@ def test_start_agent_builds_and_runs_langgraph_agent_in_background(
                 started.set()
                 await release.wait()
 
-        monkeypatch.setattr("agents.registry.ChatOpenAI", FakeChatOpenAI)
-        monkeypatch.setattr("agents.registry.InMemorySaver", FakeInMemorySaver)
-        monkeypatch.setattr("agents.registry.LangGraphAdapter", FakeLangGraphAdapter)
-        monkeypatch.setattr("agents.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
+        monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
         monkeypatch.setattr(
-            "agents.registry.render_system_prompt",
+            "agents.band.registry.LangGraphAdapter", FakeLangGraphAdapter
+        )
+        monkeypatch.setattr("agents.band.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr(
+            "agents.band.registry.render_system_prompt",
             lambda **kwargs: "rendered system prompt",
             raising=False,
         )
@@ -344,12 +369,14 @@ def test_start_agent_defaults_to_general_purpose_agent_type(
                 started.set()
                 await release.wait()
 
-        monkeypatch.setattr("agents.registry.ChatOpenAI", FakeChatOpenAI)
-        monkeypatch.setattr("agents.registry.InMemorySaver", FakeInMemorySaver)
-        monkeypatch.setattr("agents.registry.LangGraphAdapter", FakeLangGraphAdapter)
-        monkeypatch.setattr("agents.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
+        monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
         monkeypatch.setattr(
-            "agents.registry.render_system_prompt",
+            "agents.band.registry.LangGraphAdapter", FakeLangGraphAdapter
+        )
+        monkeypatch.setattr("agents.band.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr(
+            "agents.band.registry.render_system_prompt",
             lambda **kwargs: "rendered system prompt",
             raising=False,
         )
@@ -407,12 +434,14 @@ def test_start_agent_rejects_already_running_agent() -> None:
             async def run(self, shutdown_timeout: float | None = 30.0) -> None:
                 await release.wait()
 
-        monkeypatch.setattr("agents.registry.ChatOpenAI", FakeChatOpenAI)
-        monkeypatch.setattr("agents.registry.InMemorySaver", FakeInMemorySaver)
-        monkeypatch.setattr("agents.registry.LangGraphAdapter", FakeLangGraphAdapter)
-        monkeypatch.setattr("agents.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
+        monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
         monkeypatch.setattr(
-            "agents.registry.render_system_prompt",
+            "agents.band.registry.LangGraphAdapter", FakeLangGraphAdapter
+        )
+        monkeypatch.setattr("agents.band.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr(
+            "agents.band.registry.render_system_prompt",
             lambda **kwargs: "rendered system prompt",
             raising=False,
         )
@@ -469,12 +498,14 @@ def test_start_agent_returned_task_can_be_cancelled_by_caller() -> None:
                     cancelled.set()
                     raise
 
-        monkeypatch.setattr("agents.registry.ChatOpenAI", FakeChatOpenAI)
-        monkeypatch.setattr("agents.registry.InMemorySaver", FakeInMemorySaver)
-        monkeypatch.setattr("agents.registry.LangGraphAdapter", FakeLangGraphAdapter)
-        monkeypatch.setattr("agents.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
+        monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
         monkeypatch.setattr(
-            "agents.registry.render_system_prompt",
+            "agents.band.registry.LangGraphAdapter", FakeLangGraphAdapter
+        )
+        monkeypatch.setattr("agents.band.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr(
+            "agents.band.registry.render_system_prompt",
             lambda **kwargs: "rendered system prompt",
             raising=False,
         )
@@ -501,7 +532,7 @@ def test_start_agent_logs_agent_name_on_task_failure(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     async def scenario() -> None:
-        caplog.set_level(logging.INFO, logger="agents.registry")
+        caplog.set_level(logging.INFO, logger="agents.band.registry")
         registry = build_registry_without_loading_config()
         registry._agent_registry["agent_a"] = AgentEntry(
             agent_definition=AgentDefinition(
@@ -530,10 +561,12 @@ def test_start_agent_logs_agent_name_on_task_failure(
             async def run(self, shutdown_timeout: float | None = 30.0) -> None:
                 raise RuntimeError("agent failed")
 
-        monkeypatch.setattr("agents.registry.ChatOpenAI", FakeChatOpenAI)
-        monkeypatch.setattr("agents.registry.InMemorySaver", FakeInMemorySaver)
-        monkeypatch.setattr("agents.registry.LangGraphAdapter", FakeLangGraphAdapter)
-        monkeypatch.setattr("agents.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
+        monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
+        monkeypatch.setattr(
+            "agents.band.registry.LangGraphAdapter", FakeLangGraphAdapter
+        )
+        monkeypatch.setattr("agents.band.registry.Agent", FakeBandAgent)
 
         registry.start_agent("agent_a")
         task = registry._agent_tasks["agent_a"]
@@ -553,7 +586,7 @@ def test_start_agent_names_task_and_logs_task_completion(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     async def scenario() -> None:
-        caplog.set_level(logging.INFO, logger="agents.registry")
+        caplog.set_level(logging.INFO, logger="agents.band.registry")
         registry = build_registry_without_loading_config()
         registry._agent_registry["agent_b"] = AgentEntry(
             agent_definition=AgentDefinition(
@@ -582,10 +615,12 @@ def test_start_agent_names_task_and_logs_task_completion(
             async def run(self, shutdown_timeout: float | None = 30.0) -> None:
                 return None
 
-        monkeypatch.setattr("agents.registry.ChatOpenAI", FakeChatOpenAI)
-        monkeypatch.setattr("agents.registry.InMemorySaver", FakeInMemorySaver)
-        monkeypatch.setattr("agents.registry.LangGraphAdapter", FakeLangGraphAdapter)
-        monkeypatch.setattr("agents.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
+        monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
+        monkeypatch.setattr(
+            "agents.band.registry.LangGraphAdapter", FakeLangGraphAdapter
+        )
+        monkeypatch.setattr("agents.band.registry.Agent", FakeBandAgent)
 
         registry.start_agent("agent_b")
         task = registry._agent_tasks["agent_b"]
@@ -605,7 +640,7 @@ def test_start_agent_logs_task_cancellation(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     async def scenario() -> None:
-        caplog.set_level(logging.INFO, logger="agents.registry")
+        caplog.set_level(logging.INFO, logger="agents.band.registry")
         registry = build_registry_without_loading_config()
         registry._agent_registry["agent_b"] = AgentEntry(
             agent_definition=AgentDefinition(
@@ -636,10 +671,12 @@ def test_start_agent_logs_task_cancellation(
                 started.set()
                 await asyncio.Event().wait()
 
-        monkeypatch.setattr("agents.registry.ChatOpenAI", FakeChatOpenAI)
-        monkeypatch.setattr("agents.registry.InMemorySaver", FakeInMemorySaver)
-        monkeypatch.setattr("agents.registry.LangGraphAdapter", FakeLangGraphAdapter)
-        monkeypatch.setattr("agents.registry.Agent", FakeBandAgent)
+        monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
+        monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
+        monkeypatch.setattr(
+            "agents.band.registry.LangGraphAdapter", FakeLangGraphAdapter
+        )
+        monkeypatch.setattr("agents.band.registry.Agent", FakeBandAgent)
 
         registry.start_agent("agent_b")
         task = registry._agent_tasks["agent_b"]

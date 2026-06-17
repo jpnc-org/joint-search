@@ -1,8 +1,16 @@
 import asyncio
 from typing import Any
 
-from agents.main import AGENT_SPECS, BAND_REPLY_INSTRUCTIONS, AgentSpec, run_agents
-from agents.registry import AgentType
+from pytest import MonkeyPatch
+
+import agents.main as main_module
+from agents.band.registry import AgentType
+from agents.main import (
+    AGENT_SPECS,
+    BAND_REPLY_INSTRUCTIONS,
+    AgentSpec,
+    run_agents,
+)
 
 
 def test_default_agent_specs_use_single_line_instructions() -> None:
@@ -115,5 +123,41 @@ def test_run_agents_returns_when_no_tasks_are_started() -> None:
                 raise AssertionError("start_agent should not be called")
 
         await run_agents(FakeRegistry(), specs=())
+
+    asyncio.run(scenario())
+
+
+def test_main_loads_dotenv_and_runs_registry(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        calls: list[str] = []
+
+        class FakeRegistry:
+            _agent_tasks: dict[str, asyncio.Task[None]] = {}
+
+            def __init__(self) -> None:
+                calls.append("registry")
+
+        async def fake_run_agents(registry: FakeRegistry) -> None:
+            assert isinstance(registry, FakeRegistry)
+            calls.append("run_agents")
+
+        monkeypatch.setattr(
+            main_module,
+            "load_dotenv",
+            lambda: calls.append("dotenv"),
+            raising=False,
+        )
+        monkeypatch.setattr(main_module, "Registry", FakeRegistry)
+        monkeypatch.setattr(main_module, "run_agents", fake_run_agents)
+
+        await main_module.main()
+
+        assert calls == [
+            "dotenv",
+            "registry",
+            "run_agents",
+        ]
 
     asyncio.run(scenario())
