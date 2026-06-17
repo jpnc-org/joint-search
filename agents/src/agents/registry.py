@@ -11,7 +11,6 @@ import yaml
 from band import Agent
 from band.adapters import LangGraphAdapter
 from band.config import load_agent_config
-from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -39,8 +38,6 @@ class AgentEntry:
 
 class Registry:
     def __init__(self) -> None:
-        load_dotenv()
-
         ws_url = os.getenv("BAND_WS_URL")
         if not ws_url:
             raise ValueError("BAND_WS_URL environment variable is not set.")

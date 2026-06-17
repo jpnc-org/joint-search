@@ -5,6 +5,8 @@ import logging
 from dataclasses import dataclass
 from typing import Protocol
 
+from dotenv import load_dotenv
+
 from agents.registry import DEFAULT_LANGGRAPH_MODEL, AgentType, Registry
 
 logging.basicConfig(level=logging.INFO)
@@ -73,6 +75,7 @@ async def run_agents(
 
 
 async def main() -> None:
+    load_dotenv()
     await run_agents(Registry())
 
 
