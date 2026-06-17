@@ -54,7 +54,7 @@ export default function ChatPage() {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 100);
-      const clearTimer = setTimeout(() => setHighlightMessageId(null), 3000);
+      const clearTimer = setTimeout(() => setHighlightMessageId(null), 4000);
       return () => { clearTimeout(timer); clearTimeout(clearTimer); };
     }
   }, [highlightMessageId, messages]);
@@ -348,7 +348,7 @@ export default function ChatPage() {
                       const el = messageRefs.current.get(result.messageId);
                       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       setHighlightMessageId(result.messageId);
-                      setTimeout(() => setHighlightMessageId(null), 3000);
+                      setTimeout(() => setHighlightMessageId(null), 4000);
                     }
                     setSearchOpen(false);
                     setSearchText('');

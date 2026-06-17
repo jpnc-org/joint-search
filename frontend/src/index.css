@@ -110,5 +110,5 @@ body {
 }
 
 .animate-highlight {
-  animation: highlight-fade 2.5s ease-out forwards;
+  animation: highlight-fade 4s ease-out forwards;
 }
