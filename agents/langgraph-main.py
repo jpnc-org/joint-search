@@ -4,16 +4,17 @@ import os
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import InMemorySaver
 
 from band import Agent
-from band.adapters import PydanticAIAdapter
+from band.adapters import LangGraphAdapter
 from band.config import load_agent_config
-from band.runtime.prompts import render_system_prompt
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "openai-chat:deepseek/deepseek-v4-flash"
+MODEL_NAME = "deepseek/deepseek-v4-flash"
 
 
 @dataclass(frozen=True)
@@ -33,18 +34,19 @@ def build_system_prompt(display_name: str, instructions: str) -> str:
 
 
 async def run_agent(config_key: str, display_name: str, instructions: str) -> None:
-    agent_id, agent_key = load_agent_config(config_key)
+    agent_id, api_key = load_agent_config(config_key)
 
-    adapter = PydanticAIAdapter(
-        model=MODEL_NAME,
-        # system_prompt=build_system_prompt(display_name, instructions),
-        system_prompt=instructions,
+    llm = ChatOpenAI(model=MODEL_NAME)
+    adapter = LangGraphAdapter(
+        llm=llm,
+        checkpointer=InMemorySaver(),
+        custom_section=build_system_prompt(display_name, instructions),
     )
 
     agent = Agent.create(
         adapter=adapter,
         agent_id=agent_id,
-        api_key=agent_key,
+        api_key=api_key,
         ws_url=os.getenv("BAND_WS_URL"),
         rest_url=os.getenv("BAND_REST_URL"),
     )
@@ -60,12 +62,20 @@ async def main() -> None:
         AgentSpec(
             config_key="agent_a",
             display_name="Test Agent A",
-            instructions="You are a very experienced developer, mostly working with the Python and C++ programming languages. You are very helpful and always provide detailed explanations.",
+            instructions=(
+                "You are a very experienced developer, mostly working with the "
+                "Python and C++ programming languages. You are very helpful and "
+                "always provide detailed explanations."
+            ),
         ),
         AgentSpec(
             config_key="agent_b",
             display_name="Test Agent B",
-            instructions="You are a very experienced writer, mostly working with the English and Russian languages. You are a little bit rude, but still very helpful.",
+            instructions=(
+                "You are a very experienced writer, mostly working with the "
+                "English and Russian languages. You are a little bit rude, but "
+                "still very helpful."
+            ),
         ),
     )
 
