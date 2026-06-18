@@ -306,10 +306,24 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             }
           }
 
-          const allKbFiles = await findFilesRecursively(userId, kb.id, null, kb.name, '');
-          for (const fileItem of allKbFiles) {
-            if (!filter || fileItem.name.toLowerCase().includes(filter)) {
-              results.push(fileItem);
+          if (filter) {
+            const allKbFiles = await findFilesRecursively(userId, kb.id, null, kb.name, '');
+            for (const fileItem of allKbFiles) {
+              if (fileItem.name.toLowerCase().includes(filter)) {
+                results.push(fileItem);
+              }
+            }
+          } else {
+            const rootFiles = await fileRepo().find({
+              where: { userId, knowledgeBaseId: kb.id, folderId: IsNull() },
+              order: { name: 'ASC' },
+            });
+            for (const file of rootFiles) {
+              results.push({
+                id: file.id, type: 'file', name: file.name,
+                path: `${kb.name}/${file.name}`,
+                kbId: kb.id, kbName: kb.name,
+              });
             }
           }
         } else {
@@ -335,12 +349,26 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             }
           }
 
-          const subtreeFiles = await findFilesRecursively(
-            userId, kb.id, folder.id, kb.name, folderPathStr,
-          );
-          for (const fileItem of subtreeFiles) {
-            if (!filter || fileItem.name.toLowerCase().includes(filter)) {
-              results.push(fileItem);
+          if (filter) {
+            const subtreeFiles = await findFilesRecursively(
+              userId, kb.id, folder.id, kb.name, folderPathStr,
+            );
+            for (const fileItem of subtreeFiles) {
+              if (fileItem.name.toLowerCase().includes(filter)) {
+                results.push(fileItem);
+              }
+            }
+          } else {
+            const directFiles = await fileRepo().find({
+              where: { userId, knowledgeBaseId: kb.id, folderId: folder.id },
+              order: { name: 'ASC' },
+            });
+            for (const file of directFiles) {
+              results.push({
+                id: file.id, type: 'file', name: file.name,
+                path: `${kb.name}/${folderPathStr}/${file.name}`,
+                kbId: kb.id, kbName: kb.name,
+              });
             }
           }
         }
