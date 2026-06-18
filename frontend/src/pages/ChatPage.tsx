@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search, ChevronRight } from 'lucide-react';
+import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search, ChevronRight, X } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
 import api from '@/api/client';
 import { streamChat } from '@/utils/sse';
-import type { Conversation, Message, Capabilities, SearchResult } from '@/types';
+import type { Conversation, Message, Capabilities, SearchResult, MentionItem } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { ChatBubble } from 'performative-ui';
+import { MentionPopover } from '@/components/MentionPopover';
 
 const CAP_LABELS: Record<keyof Capabilities, string> = {
   code_interpreter: 'Code',
@@ -42,6 +43,9 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [selectedMentions, setSelectedMentions] = useState<MentionItem[]>([]);
 
   useEffect(() => { loadConversations(); }, []);
   useEffect(() => { if (activeConvId) loadMessages(activeConvId); }, [activeConvId]);
@@ -94,8 +98,58 @@ export default function ChatPage() {
     setActiveConvId(null);
     setMessages([]);
     setCapabilities({ code_interpreter: false, rlm: false, rag: false, web_search: false });
+    setSelectedMentions([]);
+    setMentionOpen(false);
     navigate('/chat');
     inputRef.current?.focus();
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setInput(val);
+
+    const cursorPos = e.target.selectionStart ?? val.length;
+    const beforeCursor = val.slice(0, cursorPos);
+    const atMatch = beforeCursor.match(/@([^\s@]*)$/);
+
+    if (atMatch) {
+      setMentionQuery(atMatch[1]);
+      setMentionOpen(true);
+    } else {
+      setMentionOpen(false);
+      setMentionQuery('');
+    }
+  };
+
+  const handleMentionSelect = (item: MentionItem) => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const cursorPos = textarea.selectionStart ?? input.length;
+    const beforeCursor = input.slice(0, cursorPos);
+    const afterCursor = input.slice(cursorPos);
+    const atMatch = beforeCursor.match(/@([^\s@]*)$/);
+
+    if (atMatch) {
+      const mentionStart = beforeCursor.length - atMatch[0].length;
+      const newInput = input.slice(0, mentionStart) + `@[${item.path}] ` + afterCursor;
+      setInput(newInput);
+      setSelectedMentions((prev) => {
+        if (prev.some((m) => m.id === item.id)) return prev;
+        return [...prev, item];
+      });
+      setMentionOpen(false);
+      setMentionQuery('');
+      setTimeout(() => {
+        const pos = mentionStart + item.path.length + 3;
+        textarea.selectionStart = textarea.selectionEnd = pos;
+        textarea.focus();
+      }, 0);
+    }
+  };
+
+  const removeMention = (id: string) => {
+    setSelectedMentions((prev) => prev.filter((m) => m.id !== id));
   };
 
   const deleteConversation = async (id: string) => {
@@ -112,6 +166,8 @@ export default function ChatPage() {
     if (!input.trim() || streaming) return;
     const content = input.trim();
     setInput('');
+    setSelectedMentions([]);
+    setMentionOpen(false);
     setStreaming(true);
 
     try {
@@ -135,7 +191,13 @@ export default function ChatPage() {
       let assistantReasoning = '';
       let assistantContent = '';
 
-      await streamChat(convId, content, [],
+      const fileMentions = selectedMentions.map((m) => ({
+        fileId: m.type === 'file' ? m.id : undefined,
+        fileName: m.type === 'file' ? m.name : undefined,
+        tagName: m.type === 'tag' ? m.path : undefined,
+      }));
+
+      await streamChat(convId, content, fileMentions,
         (token) => {
           assistantReasoning += token;
           setMessages((prev) => {
@@ -299,25 +361,46 @@ export default function ChatPage() {
 
         <div className="px-4 pb-4">
           <div className="mx-auto max-w-3xl">
-            <div className="flex items-end gap-2 rounded-xl border bg-card p-2">
-              <Textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                placeholder="Message..."
-                className="min-h-[24px] max-h-[150px] resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
-                rows={1}
-                disabled={streaming}
+            <div className="relative rounded-xl border bg-card p-2">
+              {selectedMentions.length > 0 && (
+                <div className="flex flex-wrap gap-1 pb-2 mb-2 border-b border-border">
+                  {selectedMentions.map((m) => (
+                    <span key={m.id} className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 text-xs text-primary font-medium">
+                      {m.type === 'knowledge-base' ? '@' : m.type === 'tag' ? '#' : '>'} {m.path}
+                      <button onClick={() => removeMention(m.id)} className="cursor-pointer hover:text-destructive">
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-end gap-2">
+                <Textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !mentionOpen) { e.preventDefault(); handleSend(); } }}
+                  placeholder="Message... (type @ to mention KBs, tags, files)"
+                  className="min-h-[24px] max-h-[150px] resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
+                  rows={1}
+                  disabled={streaming}
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={streaming || !input.trim()}
+                  size="icon"
+                  className="shrink-0 cursor-pointer"
+                >
+                  <Send className="size-4" />
+                </Button>
+              </div>
+              <MentionPopover
+                open={mentionOpen}
+                query={mentionQuery}
+                onSelect={handleMentionSelect}
+                onClose={() => { setMentionOpen(false); setMentionQuery(''); }}
+                position={{ top: 0, left: 0 }}
               />
-              <Button
-                onClick={handleSend}
-                disabled={streaming || !input.trim()}
-                size="icon"
-                className="shrink-0 cursor-pointer"
-              >
-                <Send className="size-4" />
-              </Button>
             </div>
           </div>
         </div>

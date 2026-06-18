@@ -13,6 +13,7 @@ import knowledgeBaseRoutes from './routes/knowledgeBases';
 import kbFolderRoutes from './routes/kbFolders';
 import kbFileRoutes from './routes/kbFiles';
 import kbTagRoutes from './routes/kbTags';
+import mentionRoutes from './routes/mentions';
 
 async function main() {
   await initializeDatabase();
@@ -30,6 +31,7 @@ async function main() {
   app.use('/api/knowledge-bases/:kbId/folders', authMiddleware, kbFolderRoutes);
   app.use('/api/knowledge-bases/:kbId/files', authMiddleware, kbFileRoutes);
   app.use('/api/knowledge-bases/:kbId/tags', authMiddleware, kbTagRoutes);
+  app.use('/api/mentions', authMiddleware, mentionRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });

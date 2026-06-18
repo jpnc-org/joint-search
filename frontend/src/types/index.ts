@@ -84,3 +84,12 @@ export interface SearchResult {
   conversationId: string;
   conversationTitle: string;
 }
+
+export interface MentionItem {
+  id: string;
+  type: 'knowledge-base' | 'tag' | 'file';
+  name: string;
+  path: string;
+  kbId: string;
+  kbName: string;
+}
