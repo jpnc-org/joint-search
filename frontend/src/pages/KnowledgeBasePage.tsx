@@ -233,212 +233,214 @@ export default function KnowledgeBasePage() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar: Tags */}
-      <div className="flex w-64 shrink-0 flex-col border-r border-border">
-        {activeKBId && (
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            <h2 className="px-1 text-xs font-medium text-muted-foreground">Tags</h2>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="color"
-                value={newTagColor}
-                onChange={(e) => setNewTagColor(e.target.value)}
-                className="size-7 cursor-pointer rounded-full border-0 bg-transparent"
-              />
-              <Input value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Tag name" className="h-7 text-xs" />
-              <Button onClick={createTag} size="sm" className="h-7 px-2 cursor-pointer">Add</Button>
-            </div>
-            <div className="space-y-1">
-              {tags.map((tag) => (
-                <div key={tag.id} className="flex items-center justify-between rounded-md bg-secondary px-2 py-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                    <span className="text-xs">{tag.name}</span>
-                  </div>
-                  <button onClick={() => deleteTag(tag.id)} className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer">
-                    <Trash2 className="size-2.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Main content */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Header bar with knowledge base switcher */}
-        <div className="flex items-center gap-3 border-b px-4 py-2.5">
-          <Button onClick={() => navigate('/chat')} variant="ghost" size="icon" className="size-8 shrink-0 cursor-pointer">
-            <ArrowLeft className="size-4" />
-          </Button>
-          {knowledgeBases.length > 0 && (
-            <Select
-              value={activeKBId ?? ''}
-              onValueChange={selectKB}
-            >
-              <SelectTrigger className="w-[240px]">
-                <SelectValue placeholder="Select a knowledge base" />
-              </SelectTrigger>
-              <SelectContent>
-                {knowledgeBases.map((kb) => (
-                  <SelectItem key={kb.id} value={kb.id}>
-                    <span>{kb.name}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button onClick={() => setShowCreateDialog(true)} variant="outline" size="sm" className="cursor-pointer">
-            <Plus className="size-3.5" /> New Knowledge Base
-          </Button>
+    <>
+      <div className="flex h-screen bg-background">
+        {/* Sidebar: Tags */}
+        <div className="flex w-64 shrink-0 flex-col border-r border-border">
           {activeKBId && (
-            <Button
-              onClick={() => deleteKB(activeKBId)}
-              variant="ghost"
-              size="sm"
-              className="ml-auto text-destructive cursor-pointer"
-            >
-              <Trash2 className="size-3.5" /> Delete
-            </Button>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              <h2 className="px-1 text-xs font-medium text-muted-foreground">Tags</h2>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="color"
+                  value={newTagColor}
+                  onChange={(e) => setNewTagColor(e.target.value)}
+                  className="size-7 cursor-pointer rounded-full border-0 bg-transparent"
+                />
+                <Input value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Tag name" className="h-7 text-xs" />
+                <Button onClick={createTag} size="sm" className="h-7 px-2 cursor-pointer">Add</Button>
+              </div>
+              <div className="space-y-1">
+                {tags.map((tag) => (
+                  <div key={tag.id} className="flex items-center justify-between rounded-md bg-secondary px-2 py-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                      <span className="text-xs">{tag.name}</span>
+                    </div>
+                    <button onClick={() => deleteTag(tag.id)} className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 cursor-pointer">
+                      <Trash2 className="size-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
-        {!activeKBId ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4">
-            {knowledgeBases.length === 0 ? (
-              <>
-                <p className="text-muted-foreground">No knowledge bases yet.</p>
-                <Button onClick={() => setShowCreateDialog(true)} className="cursor-pointer">
-                  <Plus className="size-4" /> Create Knowledge Base
-                </Button>
-              </>
-            ) : (
-              <p className="text-muted-foreground">Select a knowledge base.</p>
+        {/* Main content */}
+        <div className="flex flex-1 flex-col min-w-0">
+          {/* Header bar with knowledge base switcher */}
+          <div className="flex items-center gap-3 border-b px-4 py-2.5">
+            <Button onClick={() => navigate('/chat')} variant="ghost" size="icon" className="size-8 shrink-0 cursor-pointer">
+              <ArrowLeft className="size-4" />
+            </Button>
+            {knowledgeBases.length > 0 && (
+              <Select
+                value={activeKBId ?? ''}
+                onValueChange={selectKB}
+              >
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder="Select a knowledge base" />
+                </SelectTrigger>
+                <SelectContent>
+                  {knowledgeBases.map((kb) => (
+                    <SelectItem key={kb.id} value={kb.id}>
+                      <span>{kb.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button onClick={() => setShowCreateDialog(true)} variant="outline" size="sm" className="cursor-pointer">
+              <Plus className="size-3.5" /> New Knowledge Base
+            </Button>
+            {activeKBId && (
+              <Button
+                onClick={() => deleteKB(activeKBId)}
+                variant="ghost"
+                size="sm"
+                className="ml-auto text-destructive cursor-pointer"
+              >
+                <Trash2 className="size-3.5" /> Delete
+              </Button>
             )}
           </div>
-        ) : (
-          <>
-            {/* Breadcrumbs */}
-            <div className="flex items-center gap-1 border-b px-4 py-2 text-sm">
-              <button onClick={() => navigateToFolder(null)} className="text-primary hover:underline cursor-pointer">
-                {knowledgeBases.find((kb) => kb.id === activeKBId)?.name}
-              </button>
-              {breadcrumbPath.map((seg) => (
-                <span key={seg.id} className="flex items-center gap-1">
-                  <ChevronRight className="size-3 text-muted-foreground" />
-                  <button onClick={() => navigateToFolder(seg.id)} className="text-primary hover:underline cursor-pointer">
-                    {seg.name}
-                  </button>
-                </span>
-              ))}
-            </div>
 
-            {/* Folders + Files */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Folders</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} placeholder="New folder" className="h-8 text-xs" />
-                    <Button onClick={createFolder} size="sm" className="cursor-pointer"><FolderPlus className="size-3.5" /> Create</Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {folders.map((folder) => (
-                      <button
-                        key={folder.id}
-                        onClick={() => navigateToFolder(folder.id)}
-                        className="group flex items-center justify-between rounded-lg bg-secondary p-2.5 text-left text-sm transition-colors hover:bg-accent cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FolderIcon className="size-4 shrink-0 text-primary" />
-                          <span className="truncate">{folder.name}</span>
-                        </div>
+          {!activeKBId ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4">
+              {knowledgeBases.length === 0 ? (
+                <>
+                  <p className="text-muted-foreground">No knowledge bases yet.</p>
+                  <Button onClick={() => setShowCreateDialog(true)} className="cursor-pointer">
+                    <Plus className="size-4" /> Create Knowledge Base
+                  </Button>
+                </>
+              ) : (
+                <p className="text-muted-foreground">Select a knowledge base.</p>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Breadcrumbs */}
+              <div className="flex items-center gap-1 border-b px-4 py-2 text-sm">
+                <button onClick={() => navigateToFolder(null)} className="text-primary hover:underline cursor-pointer">
+                  {knowledgeBases.find((kb) => kb.id === activeKBId)?.name}
+                </button>
+                {breadcrumbPath.map((seg) => (
+                  <span key={seg.id} className="flex items-center gap-1">
+                    <ChevronRight className="size-3 text-muted-foreground" />
+                    <button onClick={() => navigateToFolder(seg.id)} className="text-primary hover:underline cursor-pointer">
+                      {seg.name}
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* Folders + Files */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Folders</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex gap-2">
+                      <Input value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} placeholder="New folder" className="h-8 text-xs" />
+                      <Button onClick={createFolder} size="sm" className="cursor-pointer"><FolderPlus className="size-3.5" /> Create</Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {folders.map((folder) => (
                         <button
-                          onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
-                          className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 shrink-0 cursor-pointer"
+                          key={folder.id}
+                          onClick={() => navigateToFolder(folder.id)}
+                          className="group flex items-center justify-between rounded-lg bg-secondary p-2.5 text-left text-sm transition-colors hover:bg-accent cursor-pointer"
                         >
-                          <Trash2 className="size-3" />
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FolderIcon className="size-4 shrink-0 text-primary" />
+                            <span className="truncate">{folder.name}</span>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
+                            className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 shrink-0 cursor-pointer"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
                         </button>
-                      </button>
-                    ))}
-                    {folders.length === 0 && (
-                      <p className="col-span-3 text-xs text-muted-foreground">No folders yet.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                      ))}
+                      {folders.length === 0 && (
+                        <p className="col-span-3 text-xs text-muted-foreground">No folders yet.</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Files</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div
-                    className="flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:border-primary"
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={handleDrop}
-                  >
-                    <input ref={fileInputRef} type="file" onChange={handleUpload} className="hidden" id="file-upload" />
-                    <label htmlFor="file-upload" className="flex cursor-pointer flex-col items-center gap-2 text-sm text-muted-foreground">
-                      <FileUp className="size-5" />
-                      {uploading ? 'Uploading...' : 'Drop file here or click to upload'}
-                    </label>
-                  </div>
-                  <div className="space-y-1.5">
-                    {files.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between rounded-lg bg-secondary p-2.5">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <FileText className="size-4 shrink-0 text-primary" />
-                          <span className="truncate text-sm">{file.originalName}</span>
-                          <span className="shrink-0 text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</span>
-                          {file.ragStatus === 'pending' && (
-                            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Queued</span>
-                          )}
-                          {file.ragStatus === 'processing' && (
-                            <span className="shrink-0 rounded bg-blue-500/20 px-1.5 py-0.5 text-[10px] text-blue-400">Indexing…</span>
-                          )}
-                          {file.ragStatus === 'failed' && (
-                            <span className="shrink-0 rounded bg-destructive/20 px-1.5 py-0.5 text-[10px] text-destructive">Failed</span>
-                          )}
-                          {file.ragStatus === 'finished' && (
-                            <span className="shrink-0 rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] text-green-400">Ready</span>
-                          )}
-                          {file.tags.map((tag) => (
-                            <span key={tag.id} className="inline-flex shrink-0 items-center gap-1.5 text-xs">
-                              <span className="size-2 rounded-full border border-white" style={{ backgroundColor: tag.color }} />
-                              {tag.name}
-                            </span>
-                          ))}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Files</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div
+                      className="flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:border-primary"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={handleDrop}
+                    >
+                      <input ref={fileInputRef} type="file" onChange={handleUpload} className="hidden" id="file-upload" />
+                      <label htmlFor="file-upload" className="flex cursor-pointer flex-col items-center gap-2 text-sm text-muted-foreground">
+                        <FileUp className="size-5" />
+                        {uploading ? 'Uploading...' : 'Drop file here or click to upload'}
+                      </label>
+                    </div>
+                    <div className="space-y-1.5">
+                      {files.map((file) => (
+                        <div key={file.id} className="flex items-center justify-between rounded-lg bg-secondary p-2.5">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <FileText className="size-4 shrink-0 text-primary" />
+                            <span className="truncate text-sm">{file.originalName}</span>
+                            <span className="shrink-0 text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</span>
+                            {file.ragStatus === 'pending' && (
+                              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Queued</span>
+                            )}
+                            {file.ragStatus === 'processing' && (
+                              <span className="shrink-0 rounded bg-blue-500/20 px-1.5 py-0.5 text-[10px] text-blue-400">Indexing…</span>
+                            )}
+                            {file.ragStatus === 'failed' && (
+                              <span className="shrink-0 rounded bg-destructive/20 px-1.5 py-0.5 text-[10px] text-destructive">Failed</span>
+                            )}
+                            {file.ragStatus === 'finished' && (
+                              <span className="shrink-0 rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] text-green-400">Ready</span>
+                            )}
+                            {file.tags.map((tag) => (
+                              <span key={tag.id} className="inline-flex shrink-0 items-center gap-1.5 text-xs">
+                                <span className="size-2 rounded-full border border-white" style={{ backgroundColor: tag.color }} />
+                                {tag.name}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1 pl-2">
+                            <Select onValueChange={(v) => addTagToFile(file.id, v)}>
+                              <SelectTrigger className="h-7 w-[80px] text-xs"><span className="text-muted-foreground">+ Tag</span></SelectTrigger>
+                              <SelectContent>
+                                {tags.map((tag) => <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <Button onClick={() => deleteFile(file.id)} variant="ghost" size="icon" className="size-7 text-destructive cursor-pointer">
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1 pl-2">
-                          <Select onValueChange={(v) => addTagToFile(file.id, v)}>
-                            <SelectTrigger className="h-7 w-[80px] text-xs"><span className="text-muted-foreground">+ Tag</span></SelectTrigger>
-                            <SelectContent>
-                              {tags.map((tag) => <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <Button onClick={() => deleteFile(file.id)} variant="ghost" size="icon" className="size-7 text-destructive cursor-pointer">
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    {files.length === 0 && (
-                      <p className="text-xs text-muted-foreground">No files yet.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        )}
+                      ))}
+                      {files.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No files yet.</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Create Knowledge Base Dialog */}
+      {/* Create Knowledge Base Dialog — outside flex container so overlay covers full screen */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -471,6 +473,6 @@ export default function KnowledgeBasePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
