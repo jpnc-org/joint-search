@@ -870,3 +870,57 @@ def test_patch_band_local_runtime_is_idempotent_and_owns_reconnect() -> None:
             await FakePHXChannelsClient().run_forever()
 
     asyncio.run(scenario())
+
+
+def test_start_agents_starts_all_specs_and_awaits_tasks(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        registry = build_registry_without_loading_config()
+        register_agent(registry, "research_planner")
+        register_agent(registry, "researcher_1")
+
+        started: list[str] = []
+
+        class FakeBandAgent:
+            @classmethod
+            def create(cls, **kwargs: Any) -> "FakeBandAgent":
+                return cls()
+
+            async def run(self, shutdown_timeout: float | None = 30.0) -> None:
+                started.append("run")
+                await asyncio.Event().wait()
+
+        install_fake_langgraph_runtime(monkeypatch, FakeBandAgent)
+
+        def fake_iter_agent_specs() -> tuple[Any, ...]:
+            from agents.band.registry import AgentSpec, AgentType
+
+            return (
+                AgentSpec(
+                    name="research_planner",
+                    agent_type=AgentType.ORCHESTRATOR,
+                    instructions="Plan.",
+                ),
+                AgentSpec(
+                    name="researcher_1",
+                    agent_type=AgentType.RESEARCHER,
+                    instructions="Research.",
+                ),
+            )
+
+        monkeypatch.setattr(registry_module, "iter_agent_specs", fake_iter_agent_specs)
+
+        run_task = asyncio.create_task(registry.start_agents())
+        await asyncio.sleep(0.05)
+
+        assert set(registry._agent_tasks) == {"research_planner", "researcher_1"}
+        assert len(started) == 2
+
+        for task in registry._agent_tasks.values():
+            task.cancel()
+        run_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await run_task
+
+    asyncio.run(scenario())

@@ -161,55 +161,10 @@ def test_decorated_registry_agent_can_add_agent_specific_methods(
 
 
 def import_agent_module(monkeypatch: MonkeyPatch, module_name: str) -> None:
-    monkeypatch.delitem(sys.modules, module_name, raising=False)
+    for key in list(sys.modules):
+        if key.startswith("agents.definitions"):
+            monkeypatch.delitem(sys.modules, key, raising=False)
     importlib.import_module(module_name)
-
-
-def test_research_planner_module_registers_research_planner(
-    monkeypatch: MonkeyPatch,
-) -> None:
-    clear_agent_specs(monkeypatch)
-
-    import_agent_module(monkeypatch, "agents.research_planner")
-
-    specs = registry_module.iter_agent_specs()
-
-    assert [spec.name for spec in specs] == [
-        "research_planner",
-    ]
-    assert specs[0].agent_type is AgentType.ORCHESTRATOR
-    assert "Break the user's question into researchable subtopics" in (
-        specs[0].instructions
-    )
-    assert "do not research the subtopics yourself" in specs[0].instructions
-    assert "\n\n" in specs[0].instructions
-    assert not specs[0].instructions.startswith(" ")
-    for spec in specs:
-        assert "band_send_message" not in spec.instructions
-        assert "tool call" not in spec.instructions
-
-
-def test_researcher_module_registers_three_researchers(
-    monkeypatch: MonkeyPatch,
-) -> None:
-    clear_agent_specs(monkeypatch)
-
-    import_agent_module(monkeypatch, "agents.researcher")
-
-    specs = registry_module.iter_agent_specs()
-
-    assert [spec.name for spec in specs] == [
-        "researcher_1",
-        "researcher_2",
-        "researcher_3",
-    ]
-    for spec in specs:
-        assert spec.agent_type is AgentType.RESEARCHER
-        assert "research the subtopics assigned to you" in spec.instructions
-        assert "\n\n" in spec.instructions
-        assert not spec.instructions.startswith(" ")
-        assert "band_send_message" not in spec.instructions
-        assert "tool call" not in spec.instructions
 
 
 def test_all_top_level_agent_modules_register_default_specs(
@@ -217,8 +172,14 @@ def test_all_top_level_agent_modules_register_default_specs(
 ) -> None:
     clear_agent_specs(monkeypatch)
 
-    import_agent_module(monkeypatch, "agents.research_planner")
-    import_agent_module(monkeypatch, "agents.researcher")
+    for module_name in (
+        "agents.definitions",
+        "agents.definitions.research_planner",
+        "agents.definitions.researcher",
+    ):
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
+
+    importlib.import_module("agents.definitions")
 
     specs = registry_module.iter_agent_specs()
 
@@ -229,5 +190,15 @@ def test_all_top_level_agent_modules_register_default_specs(
         "researcher_3",
     ]
     assert specs[0].agent_type is AgentType.ORCHESTRATOR
+    assert "Break the user's question into researchable subtopics" in (
+        specs[0].instructions
+    )
+    assert "do not research the subtopics yourself" in specs[0].instructions
     for spec in specs[1:]:
         assert spec.agent_type is AgentType.RESEARCHER
+        assert "research the subtopics assigned to you" in spec.instructions
+    for spec in specs:
+        assert "\n\n" in spec.instructions
+        assert not spec.instructions.startswith(" ")
+        assert "band_send_message" not in spec.instructions
+        assert "tool call" not in spec.instructions

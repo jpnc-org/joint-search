@@ -315,6 +315,8 @@ class Registry:
             ValueError: If ``BAND_WS_URL`` or ``BAND_REST_URL`` is not set.
         """
 
+        import agents.definitions  # noqa: F401
+
         ws_url = os.getenv("BAND_WS_URL")
         if not ws_url:
             raise ValueError("BAND_WS_URL environment variable is not set.")
@@ -330,6 +332,18 @@ class Registry:
         self._agent_tasks: dict[str, asyncio.Task[None]] = {}
 
         self._load_agent_definitions()
+
+    async def start_agents(self) -> None:
+        """Start all registered agents and wait for them to complete."""
+
+        for spec in iter_agent_specs():
+            self.start_agent(
+                spec.name,
+                agent_type=spec.agent_type,
+                system_instructions=spec.instructions,
+            )
+
+        await asyncio.gather(*self._agent_tasks.values())
 
     def _load_agent_definitions(
         self,
