@@ -10,20 +10,27 @@ from agents.band.client import (
     ParticipantSpec,
 )
 from agents.band.registry import (
+    AGENT_TYPE_MODEL_NAMES,
     BAND_TOOL_CALL_INSTRUCTIONS,
     DEFAULT_LANGGRAPH_MODEL,
     AgentDefinition,
     AgentEntry,
+    AgentSpec,
     AgentType,
     Registry,
+    agent,
     build_agent_prompt,
+    iter_agent_specs,
+    model_name_for_agent_type,
 )
 
 __all__ = [
+    "AGENT_TYPE_MODEL_NAMES",
     "BAND_TOOL_CALL_INSTRUCTIONS",
     "DEFAULT_LANGGRAPH_MODEL",
     "AgentDefinition",
     "AgentEntry",
+    "AgentSpec",
     "AgentType",
     "BandAgentProfile",
     "BandClient",
@@ -35,5 +42,8 @@ __all__ = [
     "ParticipantRole",
     "ParticipantSpec",
     "Registry",
+    "agent",
     "build_agent_prompt",
+    "iter_agent_specs",
+    "model_name_for_agent_type",
 ]

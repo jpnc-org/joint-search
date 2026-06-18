@@ -14,6 +14,7 @@ from agents.band.registry import (
     AgentType,
     Registry,
     build_agent_prompt,
+    model_name_for_agent_type,
 )
 
 
@@ -48,11 +49,15 @@ def install_fake_langgraph_runtime(
             llm: FakeChatOpenAI,
             checkpointer: FakeInMemorySaver,
             custom_section: str,
+            additional_tools: list[Any] | None = None,
         ) -> None:
             created_values.setdefault("adapters", []).append(self)
             created_values.setdefault("adapter_llms", []).append(llm)
             created_values.setdefault("adapter_checkpointers", []).append(checkpointer)
             created_values.setdefault("custom_sections", []).append(custom_section)
+            created_values.setdefault("additional_tools", []).append(
+                additional_tools or []
+            )
 
     monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
     monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
@@ -107,8 +112,33 @@ def test_registry_constructor_does_not_load_dotenv(monkeypatch: MonkeyPatch) -> 
 
 
 def test_agent_type_values_are_domain_categories() -> None:
-    assert AgentType.RESEARCH.value == "RESEARCH"
+    assert AgentType.RESEARCHER.value == "RESEARCHER"
     assert AgentType.GENERAL_PURPOSE.value == "GENERAL_PURPOSE"
+    assert AgentType.ORCHESTRATOR.value == "ORCHESTRATOR"
+
+
+def test_model_name_for_agent_type_covers_all_agent_types() -> None:
+    assert set(registry_module.AGENT_TYPE_MODEL_NAMES) == set(AgentType)
+    for agent_type in AgentType:
+        assert model_name_for_agent_type(agent_type)
+
+
+def test_model_name_for_agent_type_uses_configured_agent_type_mapping(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        registry_module,
+        "AGENT_TYPE_MODEL_NAMES",
+        {
+            AgentType.RESEARCHER: "research-model",
+            AgentType.GENERAL_PURPOSE: "general-model",
+            AgentType.ORCHESTRATOR: "orchestrator-model",
+        },
+    )
+
+    assert model_name_for_agent_type(AgentType.RESEARCHER) == "research-model"
+    assert model_name_for_agent_type(AgentType.GENERAL_PURPOSE) == "general-model"
+    assert model_name_for_agent_type(AgentType.ORCHESTRATOR) == "orchestrator-model"
 
 
 def test_build_agent_prompt_adds_band_tool_call_instructions() -> None:
@@ -120,6 +150,8 @@ def test_build_agent_prompt_adds_band_tool_call_instructions() -> None:
     assert "normal assistant message" in prompt
     assert "plain final text response" in prompt
     assert "mentions" in prompt
+    assert "\n\nIn the tool call" in prompt
+    assert "chat.\n\n" in prompt
 
 
 def test_build_agent_prompt_handles_empty_role_instructions() -> None:
@@ -127,6 +159,8 @@ def test_build_agent_prompt_handles_empty_role_instructions() -> None:
 
     assert prompt.startswith("Every answer to a Band message")
     assert "band_send_message" in prompt
+    assert "\n\n" in prompt
+    assert not prompt.startswith(" ")
 
 
 def test_load_agent_definitions_uses_top_level_keys_as_names(tmp_path: Path) -> None:
@@ -371,7 +405,7 @@ def test_start_agent_builds_and_runs_langgraph_agent_in_background(
 
         result = registry.start_agent(
             "agent_a",
-            agent_type=AgentType.RESEARCH,
+            agent_type=AgentType.RESEARCHER,
             model_name="test-model",
             system_instructions="agent-specific instructions",
             shutdown_timeout=12.5,
@@ -396,7 +430,7 @@ def test_start_agent_builds_and_runs_langgraph_agent_in_background(
             }
         ]
         assert run_calls == [12.5]
-        assert registry._agent_registry["agent_a"].agent_type is AgentType.RESEARCH
+        assert registry._agent_registry["agent_a"].agent_type is AgentType.RESEARCHER
 
         task.cancel()
         with suppress(asyncio.CancelledError):
@@ -407,6 +441,89 @@ def test_start_agent_builds_and_runs_langgraph_agent_in_background(
         assert stop_calls == [registry_module.AGENT_STOP_TIMEOUT_SECONDS]
         assert "Starting agent task 'agent_a'" in caplog.text
         assert "Agent task 'agent_a' stopped" in caplog.text
+
+    asyncio.run(scenario())
+
+
+def test_start_agent_passes_tools_to_adapter(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        registry = build_registry_without_loading_config()
+        register_agent(registry)
+        created: dict[str, Any] = {}
+        started = asyncio.Event()
+
+        class FakeBandAgent:
+            @classmethod
+            def create(cls, **kwargs: Any) -> "FakeBandAgent":
+                return cls()
+
+            async def run(self, shutdown_timeout: float | None = 30.0) -> None:
+                started.set()
+                await asyncio.Event().wait()
+
+        install_fake_langgraph_runtime(monkeypatch, FakeBandAgent, created)
+
+        fake_tool = type("FakeTool", (), {"name": "search_web"})()
+
+        registry.start_agent(
+            "agent_a",
+            tools=[fake_tool],
+        )
+        task = registry._agent_tasks["agent_a"]
+        await started.wait()
+
+        assert created["additional_tools"] == [[fake_tool]]
+
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    asyncio.run(scenario())
+
+
+def test_start_agent_uses_agent_type_model_when_model_is_not_overridden(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr(
+            registry_module,
+            "AGENT_TYPE_MODEL_NAMES",
+            {
+                AgentType.RESEARCHER: "research-model",
+                AgentType.GENERAL_PURPOSE: "general-model",
+                AgentType.ORCHESTRATOR: "orchestrator-model",
+            },
+        )
+        registry = build_registry_without_loading_config()
+        register_agent(registry, "research_planner")
+        created: dict[str, Any] = {}
+        started = asyncio.Event()
+
+        class FakeBandAgent:
+            @classmethod
+            def create(cls, **kwargs: Any) -> "FakeBandAgent":
+                return cls()
+
+            async def run(self, shutdown_timeout: float | None = 30.0) -> None:
+                started.set()
+                await asyncio.Event().wait()
+
+        install_fake_langgraph_runtime(monkeypatch, FakeBandAgent, created)
+
+        registry.start_agent(
+            "research_planner",
+            agent_type=AgentType.ORCHESTRATOR,
+        )
+        task = registry._agent_tasks["research_planner"]
+        await started.wait()
+
+        assert created["llm_models"] == ["orchestrator-model"]
+
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
 
     asyncio.run(scenario())
 
@@ -793,5 +910,59 @@ def test_patch_band_local_runtime_is_idempotent_and_owns_reconnect() -> None:
         assert completed.is_set()
         with pytest.raises(RuntimeError, match="Client is not connected"):
             await FakePHXChannelsClient().run_forever()
+
+    asyncio.run(scenario())
+
+
+def test_start_agents_starts_all_specs_and_awaits_tasks(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        registry = build_registry_without_loading_config()
+        register_agent(registry, "research_planner")
+        register_agent(registry, "researcher_1")
+
+        started: list[str] = []
+
+        class FakeBandAgent:
+            @classmethod
+            def create(cls, **kwargs: Any) -> "FakeBandAgent":
+                return cls()
+
+            async def run(self, shutdown_timeout: float | None = 30.0) -> None:
+                started.append("run")
+                await asyncio.Event().wait()
+
+        install_fake_langgraph_runtime(monkeypatch, FakeBandAgent)
+
+        def fake_iter_agent_specs() -> tuple[Any, ...]:
+            from agents.band.registry import AgentSpec, AgentType
+
+            return (
+                AgentSpec(
+                    name="research_planner",
+                    agent_type=AgentType.ORCHESTRATOR,
+                    instructions="Plan.",
+                ),
+                AgentSpec(
+                    name="researcher_1",
+                    agent_type=AgentType.RESEARCHER,
+                    instructions="Research.",
+                ),
+            )
+
+        monkeypatch.setattr(registry_module, "iter_agent_specs", fake_iter_agent_specs)
+
+        run_task = asyncio.create_task(registry.start_agents())
+        await asyncio.sleep(0.05)
+
+        assert set(registry._agent_tasks) == {"research_planner", "researcher_1"}
+        assert len(started) == 2
+
+        for task in registry._agent_tasks.values():
+            task.cancel()
+        run_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await run_task
 
     asyncio.run(scenario())
