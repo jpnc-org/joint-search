@@ -9,10 +9,9 @@ interface MentionPopoverProps {
   query: string;
   onSelect: (item: MentionItem) => void;
   onClose: () => void;
-  position: { top: number; left: number };
 }
 
-export function MentionPopover({ open, query, onSelect, onClose, position }: MentionPopoverProps) {
+export function MentionPopover({ open, query, onSelect, onClose }: MentionPopoverProps) {
   const [items, setItems] = useState<MentionItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
@@ -61,7 +60,7 @@ export function MentionPopover({ open, query, onSelect, onClose, position }: Men
     }
   }, [open, handleKeyDown]);
 
-  if (!open || items.length === 0) return null;
+  if (!open) return null;
 
   const icon = (type: MentionItem['type']) => {
     switch (type) {
@@ -82,9 +81,12 @@ export function MentionPopover({ open, query, onSelect, onClose, position }: Men
   return (
     <div
       className="absolute z-50 w-80 max-h-60 overflow-y-auto rounded-lg border bg-popover shadow-md"
-      style={{ bottom: position.top, left: position.left }}
+      style={{ bottom: '100%', left: 0, marginBottom: 8 }}
       ref={listRef}
     >
+      {items.length === 0 && (
+        <div className="px-3 py-2 text-sm text-muted-foreground">No results found.</div>
+      )}
       {items.map((item, i) => (
         <button
           key={`${item.type}-${item.id}`}

@@ -121,31 +121,21 @@ export default function ChatPage() {
     }
   };
 
+  const handleMentionClose = () => {
+    setMentionOpen(false);
+    setMentionQuery('');
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
   const handleMentionSelect = (item: MentionItem) => {
-    const textarea = inputRef.current;
-    if (!textarea) return;
-
-    const cursorPos = textarea.selectionStart ?? input.length;
-    const beforeCursor = input.slice(0, cursorPos);
-    const afterCursor = input.slice(cursorPos);
-    const atMatch = beforeCursor.match(/@([^\s@]*)$/);
-
-    if (atMatch) {
-      const mentionStart = beforeCursor.length - atMatch[0].length;
-      const newInput = input.slice(0, mentionStart) + `@[${item.path}] ` + afterCursor;
-      setInput(newInput);
-      setSelectedMentions((prev) => {
-        if (prev.some((m) => m.id === item.id)) return prev;
-        return [...prev, item];
-      });
-      setMentionOpen(false);
-      setMentionQuery('');
-      setTimeout(() => {
-        const pos = mentionStart + item.path.length + 3;
-        textarea.selectionStart = textarea.selectionEnd = pos;
-        textarea.focus();
-      }, 0);
-    }
+    setSelectedMentions((prev) => {
+      if (prev.some((m) => m.id === item.id)) return prev;
+      return [...prev, item];
+    });
+    setMentionOpen(false);
+    setMentionQuery('');
+    setInput((prev) => prev.replace(/@[^\s@]*$/, ''));
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const removeMention = (id: string) => {
@@ -398,8 +388,7 @@ export default function ChatPage() {
                 open={mentionOpen}
                 query={mentionQuery}
                 onSelect={handleMentionSelect}
-                onClose={() => { setMentionOpen(false); setMentionQuery(''); }}
-                position={{ top: 0, left: 0 }}
+                onClose={handleMentionClose}
               />
             </div>
           </div>
