@@ -10,11 +10,10 @@ import { Conversation } from './Conversation';
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
-export interface FileMention {
-  fileId?: string;
-  fileName?: string;
-  tagName?: string;
-}
+export type RagTarget =
+  | { filter_type: 'knowledge_base'; filter_value: { knowledge_base_id: string } }
+  | { filter_type: 'file_mention'; filter_value: { file_mention: string } }
+  | { filter_type: 'tag'; filter_value: { tag_id: string } };
 
 @Entity('messages')
 export class Message {
@@ -38,7 +37,7 @@ export class Message {
   reasoning!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  metadata!: { fileMentions?: FileMention[] } | null;
+  metadata!: { ragTargets?: RagTarget[] } | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

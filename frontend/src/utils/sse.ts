@@ -1,10 +1,10 @@
 import { getAccessToken } from '@/api/client';
-import type { FileMention } from '@/types';
+import type { RagTarget } from '@/types';
 
 export async function streamChat(
   conversationId: string,
   content: string,
-  fileMentions: FileMention[],
+  ragTargets: RagTarget[],
   onReasoning: (token: string) => void,
   onToken: (token: string) => void,
   onDone: (messageId: string) => void,
@@ -19,7 +19,7 @@ export async function streamChat(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
-    body: JSON.stringify({ content, fileMentions }),
+    body: JSON.stringify({ content, ragTargets }),
   });
 
   if (!response.ok) {

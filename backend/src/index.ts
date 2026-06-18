@@ -14,10 +14,16 @@ import kbFolderRoutes from './routes/kbFolders';
 import kbFileRoutes from './routes/kbFiles';
 import kbTagRoutes from './routes/kbTags';
 import mentionRoutes from './routes/mentions';
+import ragRoutes from './routes/rag';
 
 async function main() {
   await initializeDatabase();
   await ensureBucket();
+
+  const { ensureQdrantCollection } = await import('./utils/qdrant');
+  await ensureQdrantCollection().catch((err) => {
+    console.error('Qdrant connection failed (search will be unavailable):', err.message);
+  });
 
   const app = express();
 
@@ -32,6 +38,7 @@ async function main() {
   app.use('/api/knowledge-bases/:kbId/files', authMiddleware, kbFileRoutes);
   app.use('/api/knowledge-bases/:kbId/tags', authMiddleware, kbTagRoutes);
   app.use('/api/mentions', authMiddleware, mentionRoutes);
+  app.use('/api/rag', authMiddleware, ragRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });

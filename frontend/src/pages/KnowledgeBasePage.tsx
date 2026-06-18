@@ -384,6 +384,18 @@ export default function KnowledgeBasePage() {
                           <FileText className="size-4 shrink-0 text-primary" />
                           <span className="truncate text-sm">{file.originalName}</span>
                           <span className="shrink-0 text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</span>
+                          {file.ragStatus === 'pending' && (
+                            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Queued</span>
+                          )}
+                          {file.ragStatus === 'processing' && (
+                            <span className="shrink-0 rounded bg-blue-500/20 px-1.5 py-0.5 text-[10px] text-blue-400">Indexing…</span>
+                          )}
+                          {file.ragStatus === 'failed' && (
+                            <span className="shrink-0 rounded bg-destructive/20 px-1.5 py-0.5 text-[10px] text-destructive">Failed</span>
+                          )}
+                          {file.ragStatus === 'finished' && (
+                            <span className="shrink-0 rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] text-green-400">Ready</span>
+                          )}
                           {file.tags.map((tag) => (
                             <span key={tag.id} className="inline-flex shrink-0 items-center gap-1.5 text-xs">
                               <span className="size-2 rounded-full border border-white" style={{ backgroundColor: tag.color }} />

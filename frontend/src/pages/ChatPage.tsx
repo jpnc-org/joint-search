@@ -4,7 +4,7 @@ import { Plus, Send, Trash2, Settings, FolderOpen, Sparkles, Search, ChevronRigh
 import { v4 as uuid } from 'uuid';
 import api from '@/api/client';
 import { streamChat } from '@/utils/sse';
-import type { Conversation, Message, Capabilities, SearchResult, MentionItem } from '@/types';
+import type { Conversation, Message, Capabilities, SearchResult, MentionItem, RagTarget } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -181,13 +181,17 @@ export default function ChatPage() {
       let assistantReasoning = '';
       let assistantContent = '';
 
-      const fileMentions = selectedMentions.map((m) => ({
-        fileId: m.type === 'file' ? m.id : undefined,
-        fileName: m.type === 'file' ? m.name : undefined,
-        tagName: m.type === 'tag' ? m.path : undefined,
-      }));
+      const ragTargets: RagTarget[] = selectedMentions.map((m) => {
+        if (m.type === 'knowledge-base') {
+          return { filter_type: 'knowledge_base', filter_value: { knowledge_base_id: m.kbId } };
+        }
+        if (m.type === 'file') {
+          return { filter_type: 'file_mention', filter_value: { file_mention: m.id } };
+        }
+        return { filter_type: 'tag', filter_value: { tag_id: m.id } };
+      });
 
-      await streamChat(convId, content, fileMentions,
+      await streamChat(convId, content, ragTargets,
         (token) => {
           assistantReasoning += token;
           setMessages((prev) => {

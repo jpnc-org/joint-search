@@ -26,15 +26,14 @@ export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   reasoning: string | null;
-  metadata: { fileMentions?: FileMention[] } | null;
+  metadata: { ragTargets?: RagTarget[] } | null;
   createdAt: string;
 }
 
-export interface FileMention {
-  fileId?: string;
-  fileName?: string;
-  tagName?: string;
-}
+export type RagTarget =
+  | { filter_type: 'knowledge_base'; filter_value: { knowledge_base_id: string } }
+  | { filter_type: 'file_mention'; filter_value: { file_mention: string } }
+  | { filter_type: 'tag'; filter_value: { tag_id: string } };
 
 export interface FileItem {
   id: string;
@@ -48,6 +47,7 @@ export interface FileItem {
   folderId: string | null;
   tags: Tag[];
   createdAt: string;
+  ragStatus: string;
 }
 
 export interface Folder {

@@ -6,6 +6,7 @@ import { Folder, File } from '../entities';
 import { AuthRequest } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 import { uploadToS3 } from '../utils/s3';
+import { enqueueEmbed, enqueueDelete } from '../utils/queue';
 
 const router = Router({ mergeParams: true });
 const folderRepo = () => AppDataSource.getRepository(Folder);
@@ -168,6 +169,7 @@ router.post('/:folderId/files/upload', upload.single('file'), async (req: AuthRe
       folderId: req.params.folderId,
     });
     await fileRepo().save(file);
+    await enqueueEmbed(file.id);
     res.status(201).json(file);
   } catch (err) {
     console.error('Upload error:', err);
@@ -179,6 +181,13 @@ router.delete('/:folderId', async (req: AuthRequest, res: Response) => {
   try {
     const kbId = validateKbId(req, res);
     if (!kbId) return;
+
+    const filesInFolder = await fileRepo().find({
+      where: { userId: req.userId, knowledgeBaseId: kbId, folderId: req.params.folderId },
+    });
+    for (const f of filesInFolder) {
+      await enqueueDelete(f.id);
+    }
 
     const result = await folderRepo().delete({
       id: req.params.folderId,

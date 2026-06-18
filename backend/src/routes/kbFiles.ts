@@ -6,6 +6,7 @@ import { File, Tag } from '../entities';
 import { AuthRequest } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 import { uploadToS3, deleteFromS3 } from '../utils/s3';
+import { enqueueEmbed, enqueueDelete } from '../utils/queue';
 
 const router = Router({ mergeParams: true });
 const fileRepo = () => AppDataSource.getRepository(File);
@@ -62,6 +63,7 @@ router.post('/upload', upload.single('file'), async (req: AuthRequest, res: Resp
       folderId: req.body.folderId || null,
     });
     await fileRepo().save(file);
+    await enqueueEmbed(file.id);
     res.status(201).json(file);
   } catch (err) {
     console.error('Upload error:', err);
@@ -84,6 +86,7 @@ router.delete('/:fileId', async (req: AuthRequest, res: Response) => {
 
     await deleteFromS3(file.s3Key);
     await fileRepo().remove(file);
+    await enqueueDelete(file.id);
     res.status(204).send();
   } catch (err) {
     console.error('Delete file error:', err);

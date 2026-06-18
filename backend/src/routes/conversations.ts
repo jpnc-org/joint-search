@@ -138,7 +138,7 @@ router.post('/:id/messages', async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const { content, fileMentions } = req.body;
+    const { content, ragTargets } = req.body;
     if (!content) {
       res.status(400).json({ error: 'Content is required' });
       return;
@@ -148,7 +148,7 @@ router.post('/:id/messages', async (req: AuthRequest, res: Response) => {
       conversationId: conversation.id,
       role: 'user',
       content,
-      metadata: fileMentions ? { fileMentions } : null,
+      metadata: ragTargets ? { ragTargets } : null,
     });
     await msgRepo().save(userMessage);
 

@@ -26,4 +26,12 @@ export const env = {
   MAX_FILE_SIZE: parseInt(required('MAX_FILE_SIZE'), 10),
   PORT: parseInt(required('PORT'), 10),
   NODE_ENV: required('NODE_ENV'),
+  REDIS_HOST: required('REDIS_HOST'),
+  REDIS_PORT: parseInt(required('REDIS_PORT'), 10),
+  QDRANT_HOST: required('QDRANT_HOST'),
+  QDRANT_PORT: parseInt(required('QDRANT_PORT'), 10),
+  EMBEDDING_API_KEY: required('EMBEDDING_API_KEY'),
+  EMBEDDING_BASE_URL: required('EMBEDDING_BASE_URL'),
+  EMBEDDING_MODEL: required('EMBEDDING_MODEL'),
+  EMBEDDING_DIMS: parseInt(required('EMBEDDING_DIMS'), 10),
 };

@@ -64,4 +64,7 @@ export class File {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
+
+  @Column({ type: 'varchar', length: 20, name: 'rag_status', default: 'pending' })
+  ragStatus!: string;
 }
