@@ -15,6 +15,8 @@ from typing import Any, Literal, Protocol
 from band.client.rest import (
     DEFAULT_REQUEST_OPTIONS,
     AsyncRestClient,
+    ChatMessageRequest,
+    ChatMessageRequestMentionsItem,
     ChatRoomRequest,
     ParticipantRequest,
 )
@@ -105,6 +107,36 @@ class BandPeer:
     tags: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class BandMention:
+    """Participant mention used to route a Band text message.
+
+    Attributes:
+        id: Mentioned user or agent ID.
+        handle: Optional Band handle, without an ``@`` prefix.
+        name: Optional display name for the mentioned participant.
+    """
+
+    id: str
+    handle: str | None = None
+    name: str | None = None
+
+
+@dataclass(frozen=True)
+class BandSentMessage:
+    """Project-owned representation of a sent Band message response.
+
+    Attributes:
+        id: Created message ID.
+        success: Whether Band accepted the message for delivery.
+        recipients: Recipients returned by Band.
+    """
+
+    id: str
+    success: bool
+    recipients: tuple[Any, ...]
+
+
 class _RoomResponseData(Protocol):
     id: str
     title: str | None
@@ -138,12 +170,21 @@ class _PeerResponseData(Protocol):
     tags: list[str] | None
 
 
+class _MessageResponseData(Protocol):
+    id: str
+    success: bool
+    recipients: list[Any]
+
+
 class _AgentRestClient(Protocol):
     @property
     def agent_api_chats(self) -> Any: ...
 
     @property
     def agent_api_identity(self) -> Any: ...
+
+    @property
+    def agent_api_messages(self) -> Any: ...
 
     @property
     def agent_api_participants(self) -> Any: ...
@@ -153,7 +194,7 @@ class _AgentRestClient(Protocol):
 
 
 class BandClient:
-    """Async Band Agent API wrapper for rooms, peers, and participants."""
+    """Async Band Agent API wrapper for rooms, peers, participants, and messages."""
 
     def __init__(
         self,
@@ -355,6 +396,78 @@ class BandClient:
         await self.add_participants(room_id=room.id, participants=participants)
         return room
 
+    async def send_message(
+        self,
+        *,
+        room_id: str,
+        content: str,
+        mentions: Sequence[BandMention],
+    ) -> BandSentMessage:
+        """Send a text message from the authenticated agent to a Band room.
+
+        Band routes room messages through explicit mentions. The authenticated
+        agent must already be a participant in the room.
+
+        Args:
+            room_id: Band room ID to send the message to.
+            content: Text message content.
+            mentions: Mentioned room participants used by Band for delivery.
+
+        Returns:
+            Normalized message send response from Band.
+
+        Raises:
+            ValueError: If ``room_id`` or ``content`` is empty, ``mentions`` is
+                empty, or any mention ID is empty.
+            BandClientError: If Band rejects or fails the message request.
+        """
+
+        normalized_room_id = room_id.strip()
+        if not normalized_room_id:
+            raise ValueError("room_id must not be empty.")
+
+        normalized_content = content.strip()
+        if not normalized_content:
+            raise ValueError("content must not be empty.")
+
+        normalized_mentions = [
+            BandMention(
+                id=mention.id.strip(),
+                handle=mention.handle.strip() if mention.handle else None,
+                name=mention.name.strip() if mention.name else None,
+            )
+            for mention in mentions
+        ]
+        if not normalized_mentions or any(
+            not mention.id for mention in normalized_mentions
+        ):
+            raise ValueError("mentions must not contain empty mention IDs.")
+
+        try:
+            response = (
+                await self.rest_client.agent_api_messages.create_agent_chat_message(
+                    normalized_room_id,
+                    message=ChatMessageRequest(
+                        content=normalized_content,
+                        mentions=[
+                            ChatMessageRequestMentionsItem(
+                                id=mention.id,
+                                handle=mention.handle,
+                                name=mention.name,
+                            )
+                            for mention in normalized_mentions
+                        ],
+                    ),
+                    request_options=DEFAULT_REQUEST_OPTIONS,
+                )
+            )
+        except Exception as exc:
+            raise BandClientError(
+                f"Band Agent API send message failed for room '{room_id}'."
+            ) from exc
+
+        return self._normalize_sent_message(response.data)
+
     @staticmethod
     def _normalize_room(room: _RoomResponseData) -> BandRoom:
         return BandRoom(
@@ -392,4 +505,12 @@ class BandClient:
             is_external=peer.is_external,
             listed_in_directory=peer.listed_in_directory,
             tags=tuple(peer.tags or ()),
+        )
+
+    @staticmethod
+    def _normalize_sent_message(message: _MessageResponseData) -> BandSentMessage:
+        return BandSentMessage(
+            id=message.id,
+            success=message.success,
+            recipients=tuple(message.recipients),
         )

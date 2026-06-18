@@ -34,9 +34,8 @@ class AgentRegistry(Protocol):
     ) -> None: ...
 
 
-BAND_REPLY_INSTRUCTIONS = "When you answer in Band, you must call the band_send_message tool. Do not use a plain final text response because it will not be visible in the chat. Include at least one relevant participant mention in the mentions array."  # noqa: E501
-AGENT_A_INSTRUCTIONS = f"You are a very experienced developer, mostly working with the Python and C++ programming languages. You are very helpful and always provide detailed explanations. {BAND_REPLY_INSTRUCTIONS}"  # noqa: E501
-AGENT_B_INSTRUCTIONS = f"You are a very experienced writer, mostly working with the English and Russian languages. You are a little bit rude, but still very helpful. {BAND_REPLY_INSTRUCTIONS}"  # noqa: E501
+AGENT_A_INSTRUCTIONS = "You are a very experienced developer, mostly working with the Python and C++ programming languages. You are very helpful and always provide detailed explanations."  # noqa: E501
+AGENT_B_INSTRUCTIONS = "You are a very experienced writer, mostly working with the English and Russian languages. You are very helpful and willing to assist."  # noqa: E501
 
 
 AGENT_SPECS = (
@@ -59,8 +58,12 @@ async def run_agents(
     specs: tuple[AgentSpec, ...] = AGENT_SPECS,
     model_name: str = DEFAULT_LANGGRAPH_MODEL,
     shutdown_timeout: float | None = 30.0,
+    startup_delay_seconds: float = 0.75,
 ) -> None:
-    for spec in specs:
+    for index, spec in enumerate(specs):
+        if index > 0 and startup_delay_seconds > 0:
+            await asyncio.sleep(startup_delay_seconds)
+
         logger.info("Starting %s", spec.name)
         registry.start_agent(
             spec.name,

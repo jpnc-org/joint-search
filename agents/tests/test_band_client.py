@@ -11,8 +11,10 @@ from agents.band.client import (
     BandAgentProfile,
     BandClient,
     BandClientError,
+    BandMention,
     BandPeer,
     BandRoom,
+    BandSentMessage,
 )
 
 
@@ -100,6 +102,24 @@ class FakeAgentMeResponse:
         self.data = data
 
 
+class FakeMessageSent:
+    def __init__(
+        self,
+        *,
+        id: str = "message-id",
+        success: bool = True,
+        recipients: list[Any] | None = None,
+    ) -> None:
+        self.id = id
+        self.success = success
+        self.recipients = recipients or [{"id": "agent-b-id"}]
+
+
+class FakeMessageSentResponse:
+    def __init__(self, data: FakeMessageSent) -> None:
+        self.data = data
+
+
 def test_band_client_builds_rest_client_from_explicit_values(
     monkeypatch: MonkeyPatch,
 ) -> None:
@@ -140,6 +160,7 @@ def test_band_client_accepts_injected_rest_client_without_credentials() -> None:
     class FakeRestClient:
         agent_api_chats = object()
         agent_api_identity = object()
+        agent_api_messages = object()
         agent_api_participants = object()
         agent_api_peers = object()
 
@@ -168,6 +189,7 @@ def test_create_room_builds_agent_api_request_with_optional_task_id() -> None:
             def __init__(self) -> None:
                 self.agent_api_chats = FakeAgentApiChats()
                 self.agent_api_identity = object()
+                self.agent_api_messages = object()
                 self.agent_api_participants = object()
                 self.agent_api_peers = object()
 
@@ -208,6 +230,7 @@ def test_create_room_normalizes_response_to_project_room() -> None:
             def __init__(self) -> None:
                 self.agent_api_chats = FakeAgentApiChats()
                 self.agent_api_identity = object()
+                self.agent_api_messages = object()
                 self.agent_api_participants = object()
                 self.agent_api_peers = object()
 
@@ -241,6 +264,7 @@ def test_create_room_raises_project_error_for_sdk_failure() -> None:
             def __init__(self) -> None:
                 self.agent_api_chats = FakeAgentApiChats()
                 self.agent_api_identity = object()
+                self.agent_api_messages = object()
                 self.agent_api_participants = object()
                 self.agent_api_peers = object()
 
@@ -281,6 +305,7 @@ def test_get_me_normalizes_agent_identity() -> None:
             def __init__(self) -> None:
                 self.agent_api_chats = object()
                 self.agent_api_identity = FakeAgentApiIdentity()
+                self.agent_api_messages = object()
                 self.agent_api_participants = object()
                 self.agent_api_peers = object()
 
@@ -352,6 +377,7 @@ def test_list_peers_sends_pagination_and_normalizes_response() -> None:
             def __init__(self) -> None:
                 self.agent_api_chats = object()
                 self.agent_api_identity = object()
+                self.agent_api_messages = object()
                 self.agent_api_participants = object()
                 self.agent_api_peers = FakeAgentApiPeers()
 
@@ -408,6 +434,7 @@ def test_add_participants_rejects_invalid_input() -> None:
             def __init__(self) -> None:
                 self.agent_api_chats = object()
                 self.agent_api_identity = object()
+                self.agent_api_messages = object()
                 self.agent_api_participants = object()
                 self.agent_api_peers = object()
 
@@ -455,6 +482,7 @@ def test_add_participants_sends_expected_participants() -> None:
             def __init__(self) -> None:
                 self.agent_api_chats = object()
                 self.agent_api_identity = object()
+                self.agent_api_messages = object()
                 self.agent_api_participants = FakeAgentApiParticipants()
                 self.agent_api_peers = object()
 
@@ -529,6 +557,7 @@ def test_create_room_with_participants_creates_room_then_adds_participants() -> 
             def __init__(self) -> None:
                 self.agent_api_chats = FakeAgentApiChats()
                 self.agent_api_identity = object()
+                self.agent_api_messages = object()
                 self.agent_api_participants = FakeAgentApiParticipants()
                 self.agent_api_peers = object()
 
@@ -561,5 +590,163 @@ def test_create_room_with_participants_creates_room_then_adds_participants() -> 
                 "request_options": calls[2]["request_options"],
             },
         ]
+
+    asyncio.run(scenario())
+
+
+def test_send_message_rejects_invalid_input() -> None:
+    async def scenario() -> None:
+        class FakeRestClient:
+            def __init__(self) -> None:
+                self.agent_api_chats = object()
+                self.agent_api_identity = object()
+                self.agent_api_messages = object()
+                self.agent_api_participants = object()
+                self.agent_api_peers = object()
+
+        client = BandClient(rest_client=FakeRestClient())
+
+        with pytest.raises(ValueError, match="room_id"):
+            await client.send_message(
+                room_id="",
+                content="@Agent B hello",
+                mentions=[BandMention(id="agent-b-id")],
+            )
+
+        with pytest.raises(ValueError, match="content"):
+            await client.send_message(
+                room_id="room-id",
+                content=" ",
+                mentions=[BandMention(id="agent-b-id")],
+            )
+
+        with pytest.raises(ValueError, match="mentions"):
+            await client.send_message(
+                room_id="room-id",
+                content="@Agent B hello",
+                mentions=[],
+            )
+
+        with pytest.raises(ValueError, match="mentions"):
+            await client.send_message(
+                room_id="room-id",
+                content="@Agent B hello",
+                mentions=[BandMention(id=" ")],
+            )
+
+    asyncio.run(scenario())
+
+
+def test_send_message_sends_expected_message_and_normalizes_response() -> None:
+    async def scenario() -> None:
+        calls: list[dict[str, Any]] = []
+
+        class FakeAgentApiMessages:
+            async def create_agent_chat_message(
+                self,
+                chat_id: str,
+                *,
+                message: Any,
+                request_options: Any,
+            ) -> FakeMessageSentResponse:
+                calls.append(
+                    {
+                        "chat_id": chat_id,
+                        "content": message.content,
+                        "mentions": [
+                            {
+                                "id": mention.id,
+                                "handle": mention.handle,
+                                "name": mention.name,
+                            }
+                            for mention in message.mentions
+                        ],
+                        "request_options": request_options,
+                    }
+                )
+                return FakeMessageSentResponse(
+                    FakeMessageSent(
+                        id="sent-message-id",
+                        success=True,
+                        recipients=[{"id": "agent-b-id"}],
+                    )
+                )
+
+        class FakeRestClient:
+            def __init__(self) -> None:
+                self.agent_api_chats = object()
+                self.agent_api_identity = object()
+                self.agent_api_messages = FakeAgentApiMessages()
+                self.agent_api_participants = object()
+                self.agent_api_peers = object()
+
+        client = BandClient(rest_client=FakeRestClient())
+
+        sent_message = await client.send_message(
+            room_id=" room-id ",
+            content=" @Agent B hello from the orchestration test room ",
+            mentions=[
+                BandMention(
+                    id=" agent-b-id ",
+                    handle="owner/agent-b",
+                    name="Agent B",
+                )
+            ],
+        )
+
+        assert sent_message == BandSentMessage(
+            id="sent-message-id",
+            success=True,
+            recipients=({"id": "agent-b-id"},),
+        )
+        assert calls == [
+            {
+                "chat_id": "room-id",
+                "content": "@Agent B hello from the orchestration test room",
+                "mentions": [
+                    {
+                        "id": "agent-b-id",
+                        "handle": "owner/agent-b",
+                        "name": "Agent B",
+                    }
+                ],
+                "request_options": calls[0]["request_options"],
+            }
+        ]
+        assert calls[0]["request_options"] is not None
+
+    asyncio.run(scenario())
+
+
+def test_send_message_raises_project_error_for_sdk_failure() -> None:
+    async def scenario() -> None:
+        class FakeAgentApiMessages:
+            async def create_agent_chat_message(
+                self,
+                chat_id: str,
+                *,
+                message: Any,
+                request_options: Any,
+            ) -> FakeMessageSentResponse:
+                raise RuntimeError("sdk failed")
+
+        class FakeRestClient:
+            def __init__(self) -> None:
+                self.agent_api_chats = object()
+                self.agent_api_identity = object()
+                self.agent_api_messages = FakeAgentApiMessages()
+                self.agent_api_participants = object()
+                self.agent_api_peers = object()
+
+        client = BandClient(rest_client=FakeRestClient())
+
+        with pytest.raises(BandClientError, match="send message failed") as exc_info:
+            await client.send_message(
+                room_id="room-id",
+                content="@Agent B hello",
+                mentions=[BandMention(id="agent-b-id")],
+            )
+
+        assert isinstance(exc_info.value.__cause__, RuntimeError)
 
     asyncio.run(scenario())

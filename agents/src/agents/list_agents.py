@@ -6,7 +6,7 @@ import os
 
 from dotenv import load_dotenv
 
-from agents.band.client import BandClient, ParticipantSpec
+from agents.band.client import BandClient, BandMention, BandPeer, ParticipantSpec
 
 logging.basicConfig(level=logging.INFO)
 
@@ -46,6 +46,27 @@ async def main() -> None:
     for participant_id, role in participants:
         print(f"- {participant_id} ({role})")
 
+    mention_target = find_agent_mention_target(peers)
+    if mention_target is None:
+        print("No agent mention target found; message was not sent.")
+        return
+
+    sent_message = await band_client.send_message(
+        room_id=room.id,
+        content=(
+            f"@{mention_target.name} hello from the orchestration test room, "
+            "discustt with the @Test Agent B your day"
+        ),
+        mentions=[
+            BandMention(
+                id=mention_target.id,
+                handle=mention_target.handle,
+                name=mention_target.name,
+            )
+        ],
+    )
+    print(f"Sent message {sent_message.id} mentioning {mention_target.name}.")
+
 
 def build_participants(
     *,
@@ -70,6 +91,14 @@ def build_participants(
         participants.append((normalized_participant_id, "member"))
 
     return participants
+
+
+def find_agent_mention_target(peers: list[BandPeer]) -> BandPeer | None:
+    for peer in peers:
+        if peer.type == "Agent":
+            return peer
+
+    return None
 
 
 if __name__ == "__main__":

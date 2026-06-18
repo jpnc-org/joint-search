@@ -6,7 +6,7 @@ import pytest
 from pytest import MonkeyPatch
 
 import agents.list_agents as list_agents_module
-from agents.band.client import ParticipantSpec
+from agents.band.client import BandMention, ParticipantSpec
 
 
 @dataclass(frozen=True)
@@ -18,10 +18,18 @@ class FakeProfile:
 @dataclass(frozen=True)
 class FakePeer:
     id: str
+    name: str = "Agent B"
+    handle: str = "owner/agent-b"
+    type: str = "Agent"
 
 
 @dataclass(frozen=True)
 class FakeRoom:
+    id: str
+
+
+@dataclass(frozen=True)
+class FakeSentMessage:
     id: str
 
 
@@ -80,6 +88,22 @@ def test_list_agents_main_creates_room_and_adds_owner_and_peers(
             ) -> None:
                 calls.append({"room_id": room_id, "participants": participants})
 
+            async def send_message(
+                self,
+                *,
+                room_id: str,
+                content: str,
+                mentions: list[BandMention],
+            ) -> FakeSentMessage:
+                calls.append(
+                    {
+                        "message_room_id": room_id,
+                        "content": content,
+                        "mentions": mentions,
+                    }
+                )
+                return FakeSentMessage(id="sent-message-id")
+
         monkeypatch.setenv("BAND_AGENT_API_KEY", "agent-key")
         monkeypatch.setenv("BAND_REST_URL", "https://band.example.test")
         monkeypatch.setattr(
@@ -105,12 +129,27 @@ def test_list_agents_main_creates_room_and_adds_owner_and_peers(
                     ("agent-b-id", "member"),
                 ],
             },
+            {
+                "message_room_id": "room-id",
+                "content": (
+                    "@Agent B hello from the orchestration test room, "
+                    "discustt with the @Test Agent B your day"
+                ),
+                "mentions": [
+                    BandMention(
+                        id="agent-b-id",
+                        handle="owner/agent-b",
+                        name="Agent B",
+                    )
+                ],
+            },
         ]
         assert capsys.readouterr().out == (
             "Created room room-id with authenticated agent and "
             "2 added participants:\n"
             "- owner-user-id (member)\n"
             "- agent-b-id (member)\n"
+            "Sent message sent-message-id mentioning Agent B.\n"
         )
 
     asyncio.run(scenario())
@@ -153,6 +192,15 @@ def test_list_agents_main_prints_when_no_additional_participants(
             ) -> None:
                 raise AssertionError("participants should not be added")
 
+            async def send_message(
+                self,
+                *,
+                room_id: str,
+                content: str,
+                mentions: list[BandMention],
+            ) -> FakeSentMessage:
+                raise AssertionError("message should not be sent")
+
         monkeypatch.setenv("BAND_AGENT_API_KEY", "agent-key")
         monkeypatch.setenv("BAND_REST_URL", "https://band.example.test")
         monkeypatch.setattr(
@@ -169,6 +217,90 @@ def test_list_agents_main_prints_when_no_additional_participants(
         assert (
             capsys.readouterr().out
             == "Created room room-id; no additional participants found.\n"
+        )
+
+    asyncio.run(scenario())
+
+
+def test_list_agents_main_prints_when_no_agent_mention_target(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        calls: list[Any] = []
+
+        class FakeBandClient:
+            def __init__(self, *, api_key: str, base_url: str) -> None:
+                calls.append("band_client")
+
+            async def get_me(self) -> FakeProfile:
+                calls.append("get_me")
+                return FakeProfile(id="agent-a-id", owner_uuid="owner-user-id")
+
+            async def create_room(self) -> FakeRoom:
+                calls.append("create_room")
+                return FakeRoom(id="room-id")
+
+            async def list_peers(
+                self,
+                *,
+                not_in_chat: str | None = None,
+                page: int | None = None,
+                page_size: int | None = None,
+            ) -> list[FakePeer]:
+                calls.append("list_peers")
+                return [
+                    FakePeer(
+                        id="owner-contact-id",
+                        name="Owner Contact",
+                        handle="owner.contact",
+                        type="User",
+                    )
+                ]
+
+            async def add_participants(
+                self,
+                *,
+                room_id: str,
+                participants: list[ParticipantSpec],
+            ) -> None:
+                calls.append({"room_id": room_id, "participants": participants})
+
+            async def send_message(
+                self,
+                *,
+                room_id: str,
+                content: str,
+                mentions: list[BandMention],
+            ) -> FakeSentMessage:
+                raise AssertionError("message should not be sent")
+
+        monkeypatch.setenv("BAND_AGENT_API_KEY", "agent-key")
+        monkeypatch.setenv("BAND_REST_URL", "https://band.example.test")
+        monkeypatch.setattr(list_agents_module, "load_dotenv", lambda: None)
+        monkeypatch.setattr(list_agents_module, "BandClient", FakeBandClient)
+
+        await list_agents_module.main()
+
+        assert calls == [
+            "band_client",
+            "get_me",
+            "create_room",
+            "list_peers",
+            {
+                "room_id": "room-id",
+                "participants": [
+                    ("owner-user-id", "member"),
+                    ("owner-contact-id", "member"),
+                ],
+            },
+        ]
+        assert capsys.readouterr().out == (
+            "Created room room-id with authenticated agent and "
+            "2 added participants:\n"
+            "- owner-user-id (member)\n"
+            "- owner-contact-id (member)\n"
+            "No agent mention target found; message was not sent.\n"
         )
 
     asyncio.run(scenario())

@@ -1,4 +1,7 @@
 import asyncio
+import subprocess
+import sys
+from pathlib import Path
 from typing import Any
 
 from pytest import MonkeyPatch
@@ -7,7 +10,6 @@ import agents.main as main_module
 from agents.band.registry import AgentType
 from agents.main import (
     AGENT_SPECS,
-    BAND_REPLY_INSTRUCTIONS,
     AgentSpec,
     run_agents,
 )
@@ -17,19 +19,42 @@ def test_default_agent_specs_use_single_line_instructions() -> None:
     assert AGENT_SPECS[0].instructions == (
         "You are a very experienced developer, mostly working with the Python and "
         "C++ programming languages. You are very helpful and always provide "
-        f"detailed explanations. {BAND_REPLY_INSTRUCTIONS}"
+        "detailed explanations."
     )
     assert AGENT_SPECS[1].instructions == (
         "You are a very experienced writer, mostly working with the English and "
-        "Russian languages. You are a little bit rude, but still very helpful. "
-        f"{BAND_REPLY_INSTRUCTIONS}"
+        "Russian languages. You are a little bit rude, but still very helpful."
     )
 
 
-def test_default_agent_specs_require_band_send_message_tool() -> None:
+def test_default_agent_specs_leave_band_delivery_to_registry() -> None:
     for spec in AGENT_SPECS:
-        assert "band_send_message" in spec.instructions
-        assert "plain final text response" in spec.instructions
+        assert "band_send_message" not in spec.instructions
+        assert "tool call" not in spec.instructions
+
+
+def test_main_imports_when_script_directory_is_first_on_path() -> None:
+    code = """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path("src/agents").resolve()))
+sys.path.insert(1, str(Path("src").resolve()))
+
+import agents.main
+
+print("ok")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "ok" in result.stdout
 
 
 def test_run_agents_starts_specs_and_waits_for_registry_tasks() -> None:
@@ -83,6 +108,7 @@ def test_run_agents_starts_specs_and_waits_for_registry_tasks() -> None:
             specs=specs,
             model_name="test-model",
             shutdown_timeout=12.5,
+            startup_delay_seconds=0.0,
         )
 
         assert registry.start_calls == [
@@ -102,6 +128,83 @@ def test_run_agents_starts_specs_and_waits_for_registry_tasks() -> None:
             },
         ]
         assert completed == ["agent_a", "agent_b"]
+
+    asyncio.run(scenario())
+
+
+def test_run_agents_staggers_agent_startup_between_specs(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        sleep_calls: list[float] = []
+        original_sleep = asyncio.sleep
+
+        async def fake_sleep(delay: float) -> None:
+            sleep_calls.append(delay)
+            await original_sleep(0)
+
+        monkeypatch.setattr(main_module.asyncio, "sleep", fake_sleep)
+
+        async def never_finishes() -> None:
+            await asyncio.Event().wait()
+
+        class FakeRegistry:
+            def __init__(self) -> None:
+                self._agent_tasks: dict[str, asyncio.Task[None]] = {}
+                self.started: list[str] = []
+                self.all_started = asyncio.Event()
+
+            def start_agent(
+                self,
+                name: str,
+                *,
+                agent_type: AgentType = AgentType.GENERAL_PURPOSE,
+                model_name: str = "test-model",
+                system_instructions: str = "",
+                shutdown_timeout: float | None = 30.0,
+            ) -> None:
+                self.started.append(name)
+                self._agent_tasks[name] = asyncio.create_task(never_finishes())
+                if len(self.started) == 3:
+                    self.all_started.set()
+
+        registry = FakeRegistry()
+        specs = (
+            AgentSpec(
+                name="agent_a",
+                agent_type=AgentType.RESEARCH,
+                instructions="Research instructions.",
+            ),
+            AgentSpec(
+                name="agent_b",
+                agent_type=AgentType.GENERAL_PURPOSE,
+                instructions="General instructions.",
+            ),
+            AgentSpec(
+                name="agent_c",
+                agent_type=AgentType.GENERAL_PURPOSE,
+                instructions="More instructions.",
+            ),
+        )
+
+        run_task = asyncio.create_task(
+            run_agents(
+                registry,
+                specs=specs,
+                startup_delay_seconds=0.75,
+            )
+        )
+        await registry.all_started.wait()
+
+        assert sleep_calls == [0.75, 0.75]
+
+        for task in registry._agent_tasks.values():
+            task.cancel()
+        run_task.cancel()
+        try:
+            await run_task
+        except asyncio.CancelledError:
+            pass
 
     asyncio.run(scenario())
 

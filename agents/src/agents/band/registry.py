@@ -1,7 +1,7 @@
 """In-memory registry for starting configured Band agents as asyncio tasks.
 
 The registry loads Band agent credentials from ``agent_config.yaml`` through the
-Band SDK loader, then starts local LangGraph-backed agent loops with
+Band SDK loader, then starts supervised local LangGraph-backed agent loops with
 ``Agent.create(...).run()``. It tracks only local asyncio tasks for this Python
 process; Band platform execution state is managed by Band itself.
 """
@@ -14,6 +14,7 @@ import os
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 import yaml
 from band import Agent
@@ -23,7 +24,100 @@ from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 
 DEFAULT_LANGGRAPH_MODEL = "deepseek/deepseek-v4-flash"
+BAND_TOOL_CALL_INSTRUCTIONS = (
+    "Every answer to a Band message must be delivered by a tool call named "
+    "band_send_message. Do not answer as a normal assistant message or a plain "
+    "final text response because those are not visible in the Band chat. In the "
+    "tool call, set content to your full answer and set mentions to at least "
+    "one relevant participant, usually the sender you are replying to. If you "
+    "need to think or use other tools first, still finish by calling "
+    "band_send_message."
+)
+AGENT_RECONNECT_BASE_DELAY_SECONDS = 2.0
+AGENT_RECONNECT_MAX_DELAY_SECONDS = 60.0
+AGENT_STOP_TIMEOUT_SECONDS = 2.0
+AGENT_CONFIG_FILENAME = "agent_config.yaml"
+DEFAULT_AGENT_CONFIG_PATH = Path(__file__).resolve().parents[3] / AGENT_CONFIG_FILENAME
 logger = logging.getLogger(__name__)
+
+
+def _patch_band_local_runtime(streaming_client: Any | None = None) -> None:
+    """Patch Band websocket runtime so this process owns reconnect/shutdown."""
+
+    if streaming_client is None:
+        try:
+            from band.client.streaming import client as streaming_client
+        except Exception:
+            logger.debug("Could not import Band streaming client", exc_info=True)
+            return
+
+    websocket_cls = getattr(streaming_client, "WebSocketClient", None)
+    if websocket_cls is not None:
+        current_aenter = getattr(websocket_cls, "__aenter__", None)
+        if current_aenter is not None and not getattr(
+            current_aenter,
+            "_agents_no_auto_reconnect",
+            False,
+        ):
+
+            async def _agents_aenter(self: Any) -> Any:
+                result = await current_aenter(self)
+                client = getattr(self, "client", None)
+                if client is not None and hasattr(client, "auto_reconnect"):
+                    client.auto_reconnect = False
+                return result
+
+            _agents_aenter._agents_no_auto_reconnect = True  # type: ignore[attr-defined]
+            websocket_cls.__aenter__ = _agents_aenter
+
+    phx_cls = getattr(streaming_client, "PHXChannelsClient", None)
+    if phx_cls is not None:
+        current_run_forever = getattr(phx_cls, "run_forever", None)
+        if current_run_forever is not None and not getattr(
+            current_run_forever,
+            "_agents_no_signal_handlers",
+            False,
+        ):
+
+            async def _agents_run_forever(self: Any) -> None:
+                supervisor_task = getattr(self, "_supervisor_task", None)
+                if supervisor_task is None:
+                    raise RuntimeError("Client is not connected")
+                await supervisor_task
+
+            _agents_run_forever._agents_no_signal_handlers = True  # type: ignore[attr-defined]
+            phx_cls.run_forever = _agents_run_forever
+
+
+def _reconnect_delay_seconds(attempt: int) -> float:
+    return min(
+        AGENT_RECONNECT_BASE_DELAY_SECONDS * (2 ** min(max(attempt - 1, 0), 5)),
+        AGENT_RECONNECT_MAX_DELAY_SECONDS,
+    )
+
+
+def _resolve_agent_definitions_path(agent_definitions_file_path: str | Path) -> Path:
+    agent_definitions_path = Path(agent_definitions_file_path)
+
+    if agent_definitions_path == Path("."):
+        current_directory_config = Path.cwd() / AGENT_CONFIG_FILENAME
+        if current_directory_config.is_file():
+            return current_directory_config
+        return DEFAULT_AGENT_CONFIG_PATH
+
+    if agent_definitions_path.is_dir():
+        return agent_definitions_path / AGENT_CONFIG_FILENAME
+
+    return agent_definitions_path
+
+
+def build_agent_prompt(system_instructions: str) -> str:
+    """Build the registry-managed custom prompt section for Band agents."""
+
+    role_instructions = system_instructions.strip()
+    if not role_instructions:
+        return BAND_TOOL_CALL_INSTRUCTIONS
+    return f"{role_instructions}\n\n{BAND_TOOL_CALL_INSTRUCTIONS}"
 
 
 class AgentType(StrEnum):
@@ -105,7 +199,8 @@ class Registry:
         Args:
             agent_definitions_file_path: Path to an ``agent_config.yaml`` file,
                 or a directory containing that file. Defaults to the current
-                working directory.
+                working directory, then falls back to this ``agents`` project
+                directory.
 
         Returns:
             Mapping from local agent name to normalized agent definition.
@@ -115,9 +210,9 @@ class Registry:
                 a string, or an agent entry is not a mapping.
         """
 
-        agent_definitions_path = Path(agent_definitions_file_path)
-        if agent_definitions_path.is_dir():
-            agent_definitions_path = agent_definitions_path / "agent_config.yaml"
+        agent_definitions_path = _resolve_agent_definitions_path(
+            agent_definitions_file_path
+        )
 
         with agent_definitions_path.open(encoding="utf-8") as file:
             raw_config = yaml.safe_load(file) or {}
@@ -193,40 +288,86 @@ class Registry:
 
         agent_definition = entry.agent_definition
         entry.agent_type = agent_type
+        _patch_band_local_runtime()
 
-        async def run_agent() -> None:
+        async def run_agent_forever() -> None:
             logger.info("Starting agent task '%s'", name)
-
-            llm = ChatOpenAI(model=model_name)
-            adapter = LangGraphAdapter(
-                llm=llm,
-                checkpointer=InMemorySaver(),
-                custom_section=system_instructions,
-            )
-
-            agent = Agent.create(
-                adapter=adapter,
-                agent_id=agent_definition.band_agent_id,
-                api_key=agent_definition.band_api_key,
-                ws_url=self._ws_url,
-                rest_url=self._rest_url,
-            )
+            attempt = 0
 
             try:
-                await agent.run(shutdown_timeout=shutdown_timeout)
-            except Exception:
-                logger.exception("Agent task '%s' failed", name)
+                while True:
+                    attempt += 1
+                    agent = self._create_agent(
+                        agent_definition=agent_definition,
+                        model_name=model_name,
+                        system_instructions=system_instructions,
+                    )
+                    try:
+                        await agent.run(shutdown_timeout=shutdown_timeout)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        logger.exception(
+                            "Agent task '%s' failed; reconnecting (attempt %d)",
+                            name,
+                            attempt,
+                        )
+                    else:
+                        logger.warning(
+                            "Agent task '%s' exited cleanly; reconnecting (attempt %d)",
+                            name,
+                            attempt,
+                        )
+                    finally:
+                        await self._safe_stop_agent(name, agent)
+
+                    await asyncio.sleep(_reconnect_delay_seconds(attempt))
+            except asyncio.CancelledError:
                 raise
             finally:
                 if self._agent_tasks.get(name) is asyncio.current_task():
                     self._agent_tasks.pop(name)
                 logger.info("Agent task '%s' stopped", name)
 
-        task = asyncio.create_task(run_agent(), name=f"band-agent-{name}")
+        task = asyncio.create_task(run_agent_forever(), name=f"band-agent-{name}")
         task.add_done_callback(
             lambda completed_task: self._log_agent_task_result(name, completed_task)
         )
         self._agent_tasks[name] = task
+
+    def _create_agent(
+        self,
+        *,
+        agent_definition: AgentDefinition,
+        model_name: str,
+        system_instructions: str,
+    ) -> Any:
+        llm = ChatOpenAI(model=model_name)
+        adapter = LangGraphAdapter(
+            llm=llm,
+            checkpointer=InMemorySaver(),
+            custom_section=build_agent_prompt(system_instructions),
+        )
+
+        return Agent.create(
+            adapter=adapter,
+            agent_id=agent_definition.band_agent_id,
+            api_key=agent_definition.band_api_key,
+            ws_url=self._ws_url,
+            rest_url=self._rest_url,
+        )
+
+    async def _safe_stop_agent(self, name: str, agent: Any) -> None:
+        stop = getattr(agent, "stop", None)
+        if stop is None:
+            return
+
+        try:
+            await stop(timeout=AGENT_STOP_TIMEOUT_SECONDS)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.debug("Agent task '%s' stop failed", name, exc_info=True)
 
     def _log_agent_task_result(
         self,
