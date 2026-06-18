@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FolderPlus, FileUp, Trash2, Folder as FolderIcon, FileText, ChevronRight, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
 import api from '@/api/client';
+import { useToast } from '@/components/ui/toast';
 import type { FileItem, Folder, Tag, KnowledgeBase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ import {
 export default function KnowledgeBasePage() {
   const { knowledgeBaseId, folderId } = useParams<{ knowledgeBaseId?: string; folderId?: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -180,17 +182,22 @@ export default function KnowledgeBasePage() {
     const file = e.target.files?.[0];
     if (!file || !activeKBId) return;
     setUploading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    const uploadUrl = activeFolderId
-      ? `/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files/upload`
-      : `/knowledge-bases/${activeKBId}/files/upload`;
-    await api.post(uploadUrl, fd);
-    setUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (activeFolderId) {
-      const { data } = await api.get(`/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files`);
-      setFiles(data);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const uploadUrl = activeFolderId
+        ? `/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files/upload`
+        : `/knowledge-bases/${activeKBId}/files/upload`;
+      await api.post(uploadUrl, fd);
+      if (activeFolderId) {
+        const { data } = await api.get(`/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files`);
+        setFiles(data);
+      }
+    } catch (err: any) {
+      toast(err?.response?.data?.error || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -199,16 +206,21 @@ export default function KnowledgeBasePage() {
     const file = e.dataTransfer.files[0];
     if (!file || !activeKBId) return;
     setUploading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    const uploadUrl = activeFolderId
-      ? `/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files/upload`
-      : `/knowledge-bases/${activeKBId}/files/upload`;
-    await api.post(uploadUrl, fd);
-    setUploading(false);
-    if (activeFolderId) {
-      const { data } = await api.get(`/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files`);
-      setFiles(data);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const uploadUrl = activeFolderId
+        ? `/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files/upload`
+        : `/knowledge-bases/${activeKBId}/files/upload`;
+      await api.post(uploadUrl, fd);
+      if (activeFolderId) {
+        const { data } = await api.get(`/knowledge-bases/${activeKBId}/folders/${activeFolderId}/files`);
+        setFiles(data);
+      }
+    } catch (err: any) {
+      toast(err?.response?.data?.error || 'Upload failed');
+    } finally {
+      setUploading(false);
     }
   };
 
