@@ -1,7 +1,15 @@
-agent_a:
+research_planner:
   agent_id: "<your-agent-uuid>"
   api_key: "<your-api-key>"
 
-agent_b:
+researcher_1:
+  agent_id: "<your-agent-uuid>"
+  api_key: "<your-api-key>"
+
+researcher_2:
+  agent_id: "<your-agent-uuid>"
+  api_key: "<your-api-key>"
+
+researcher_3:
   agent_id: "<your-agent-uuid>"
   api_key: "<your-api-key>"

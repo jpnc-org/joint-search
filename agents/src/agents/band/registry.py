@@ -11,10 +11,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from inspect import cleandoc
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import yaml
 from band import Agent
@@ -24,14 +26,19 @@ from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 
 DEFAULT_LANGGRAPH_MODEL = "deepseek/deepseek-v4-flash"
-BAND_TOOL_CALL_INSTRUCTIONS = (
-    "Every answer to a Band message must be delivered by a tool call named "
-    "band_send_message. Do not answer as a normal assistant message or a plain "
-    "final text response because those are not visible in the Band chat. In the "
-    "tool call, set content to your full answer and set mentions to at least "
-    "one relevant participant, usually the sender you are replying to. If you "
-    "need to think or use other tools first, still finish by calling "
-    "band_send_message."
+BAND_TOOL_CALL_INSTRUCTIONS = cleandoc(
+    """
+    Every answer to a Band message must be delivered by a tool call named
+    band_send_message. Do not answer as a normal assistant message. Do not
+    answer with a plain final text response because those are not visible in the
+    Band chat.
+
+    In the tool call, set content to your full answer and set mentions to at
+    least one relevant participant, usually the sender you are replying to.
+
+    If you need to think or use other tools first, still finish by calling
+    band_send_message.
+    """
 )
 AGENT_RECONNECT_BASE_DELAY_SECONDS = 2.0
 AGENT_RECONNECT_MAX_DELAY_SECONDS = 60.0
@@ -124,12 +131,146 @@ class AgentType(StrEnum):
     """Domain category used to choose the agent's prompt/runtime behavior.
 
     Values:
-        RESEARCH: Research-oriented agent behavior.
+        RESEARCHER: Researcher agent behavior.
         GENERAL_PURPOSE: Default general assistant behavior.
+        ORCHESTRATOR: Agent behavior for coordinating other agents.
     """
 
-    RESEARCH = "RESEARCH"
+    RESEARCHER = "RESEARCHER"
     GENERAL_PURPOSE = "GENERAL_PURPOSE"
+    ORCHESTRATOR = "ORCHESTRATOR"
+
+
+AGENT_TYPE_MODEL_NAMES: dict[AgentType, str] = {
+    AgentType.RESEARCHER: DEFAULT_LANGGRAPH_MODEL,
+    AgentType.GENERAL_PURPOSE: DEFAULT_LANGGRAPH_MODEL,
+    AgentType.ORCHESTRATOR: DEFAULT_LANGGRAPH_MODEL,
+}
+
+
+def model_name_for_agent_type(agent_type: AgentType) -> str:
+    """Return the default chat model for an agent behavior category."""
+
+    return AGENT_TYPE_MODEL_NAMES[agent_type]
+
+
+@dataclass(frozen=True)
+class AgentSpec:
+    """Role instructions and startup metadata for one local Band agent name.
+
+    Attributes:
+        name: Local registry key from ``agent_config.yaml``.
+        agent_type: Domain behavior category passed into ``start_agent``.
+        instructions: Role-specific prompt text. Band delivery instructions are
+            appended later by ``build_agent_prompt``.
+    """
+
+    name: str
+    agent_type: AgentType
+    instructions: str
+
+
+_agent_specs: dict[str, AgentSpec] = {}
+
+
+class RegistryAgent:
+    """Base class for code-defined local agents.
+
+    Subclasses must be decorated with ``@agent(...)`` to register themselves.
+    Keep shared behavior here as the local agent model grows.
+    """
+
+    @classmethod
+    def instructions(cls) -> str:
+        """Return role-specific instructions for this local agent."""
+
+        return ""
+
+
+AgentClass = TypeVar("AgentClass", bound=type[RegistryAgent])
+
+
+def agent(
+    *,
+    names: Sequence[str],
+    agent_type: AgentType,
+) -> Callable[[AgentClass], AgentClass]:
+    """Register a ``RegistryAgent`` class for one or more local agent names."""
+
+    normalized_names = _normalize_agent_names(names)
+
+    def decorator(agent_class: AgentClass) -> AgentClass:
+        _register_agent_class(
+            agent_class,
+            names=normalized_names,
+            agent_type=agent_type,
+        )
+        return agent_class
+
+    return decorator
+
+
+def iter_agent_specs() -> tuple[AgentSpec, ...]:
+    """Return registered local agent startup specs in registration order."""
+
+    return tuple(_agent_specs.values())
+
+
+def _register_agent_class(
+    agent_class: type[RegistryAgent],
+    *,
+    names: tuple[str, ...],
+    agent_type: AgentType,
+) -> None:
+    instructions = _load_agent_instructions(agent_class.instructions())
+    specs = tuple(
+        AgentSpec(
+            name=name,
+            agent_type=agent_type,
+            instructions=instructions,
+        )
+        for name in names
+    )
+
+    for spec in specs:
+        if spec.name in _agent_specs:
+            raise ValueError(f"Agent '{spec.name}' is already registered.")
+
+    for spec in specs:
+        _agent_specs[spec.name] = spec
+
+
+def _normalize_agent_names(names: Sequence[str]) -> tuple[str, ...]:
+    if isinstance(names, str) or not names:
+        raise ValueError("Agent names must include at least one name.")
+
+    normalized_names: list[str] = []
+    seen_names: set[str] = set()
+    for raw_name in names:
+        if not isinstance(raw_name, str):
+            raise ValueError("Agent names must be strings.")
+
+        name = raw_name.strip()
+        if not name:
+            raise ValueError("Agent names must be non-empty strings.")
+        if name in seen_names:
+            raise ValueError(f"Agent '{name}' is already registered.")
+
+        normalized_names.append(name)
+        seen_names.add(name)
+
+    return tuple(normalized_names)
+
+
+def _load_agent_instructions(raw_instructions: str) -> str:
+    if not isinstance(raw_instructions, str):
+        raise ValueError("Agent instructions must be a string.")
+
+    instructions = raw_instructions.strip()
+    if not instructions:
+        raise ValueError("Agent instructions must not be empty.")
+
+    return instructions
 
 
 @dataclass(frozen=True)
@@ -251,7 +392,7 @@ class Registry:
         name: str,
         *,
         agent_type: AgentType = AgentType.GENERAL_PURPOSE,
-        model_name: str = DEFAULT_LANGGRAPH_MODEL,
+        model_name: str | None = None,
         system_instructions: str = "",
         shutdown_timeout: float | None = 30.0,
     ) -> None:
@@ -265,7 +406,8 @@ class Registry:
             name: Local agent name loaded from ``agent_config.yaml``.
             agent_type: Domain behavior category to attach to the registry
                 entry.
-            model_name: Chat model identifier passed to ``ChatOpenAI``.
+            model_name: Optional chat model override. When omitted, the model is
+                selected from ``agent_type``.
             system_instructions: Additional instructions passed into the
                 LangGraph adapter custom section.
             shutdown_timeout: Timeout passed through to ``Agent.run`` when the
@@ -288,6 +430,11 @@ class Registry:
 
         agent_definition = entry.agent_definition
         entry.agent_type = agent_type
+        resolved_model_name = (
+            model_name
+            if model_name is not None
+            else model_name_for_agent_type(agent_type)
+        )
         _patch_band_local_runtime()
 
         async def run_agent_forever() -> None:
@@ -299,7 +446,7 @@ class Registry:
                     attempt += 1
                     agent = self._create_agent(
                         agent_definition=agent_definition,
-                        model_name=model_name,
+                        model_name=resolved_model_name,
                         system_instructions=system_instructions,
                     )
                     try:
