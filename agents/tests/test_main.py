@@ -42,7 +42,7 @@ def test_main_loads_dotenv_creates_registry_and_starts_agents(
         monkeypatch.setattr(
             main_module,
             "load_dotenv",
-            lambda: calls.append("dotenv"),
+            lambda *args, **kwargs: calls.append("dotenv"),
             raising=False,
         )
 

@@ -21,8 +21,7 @@ class ResearchPlannerAgent:
             matters. You do not research the subtopics yourself; produce the plan
             that other agents should execute.
 
-            After each subtopic is set, inspect how many research agnets are available
-            in the band room. Assign one topic per agent by mentioning them in chat and
-            telling the topic to research.
+            After each subtopic is set, inspect how many research agents are available
+            in the band room (check the system participant list). Assign one topic per agent by mentioning them in chat using their exact handles (e.g. @username/researcher_1) and telling the topic to research. Mentioning their exact handles is critical for them to receive the message.
             """
         )

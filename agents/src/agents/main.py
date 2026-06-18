@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
-    load_dotenv()
+    load_dotenv(override=True)
     registry = Registry()
     await registry.start_agents()
 

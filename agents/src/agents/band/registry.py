@@ -27,7 +27,7 @@ from langchain_core.tools import tool as _langchain_tool
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 
-DEFAULT_LANGGRAPH_MODEL = "deepseek/deepseek-v4-flash"
+DEFAULT_LANGGRAPH_MODEL = "qwen-plus"
 _AGENT_TOOL_MARKER = "_agent_tool"
 BAND_TOOL_CALL_INSTRUCTIONS = cleandoc(
     """
@@ -41,6 +41,8 @@ BAND_TOOL_CALL_INSTRUCTIONS = cleandoc(
 
     If you need to think or use other tools first, still finish by calling
     band_send_message.
+
+    CRITICAL: You MUST call band_send_message EXACTLY ONCE per execution. Once you have called it to deliver your final answer, immediately terminate the run by returning a simple final text response like "Response sent." so the execution ends.
     """
 )
 AGENT_RECONNECT_BASE_DELAY_SECONDS = 2.0
@@ -137,17 +139,20 @@ class AgentType(StrEnum):
         RESEARCHER: Researcher agent behavior.
         GENERAL_PURPOSE: Default general assistant behavior.
         ORCHESTRATOR: Agent behavior for coordinating other agents.
+        COORDINATOR: Agent behavior for triggering debate and final synthesis.
     """
 
     RESEARCHER = "RESEARCHER"
     GENERAL_PURPOSE = "GENERAL_PURPOSE"
     ORCHESTRATOR = "ORCHESTRATOR"
+    COORDINATOR = "COORDINATOR"
 
 
 AGENT_TYPE_MODEL_NAMES: dict[AgentType, str] = {
     AgentType.RESEARCHER: DEFAULT_LANGGRAPH_MODEL,
     AgentType.GENERAL_PURPOSE: DEFAULT_LANGGRAPH_MODEL,
     AgentType.ORCHESTRATOR: DEFAULT_LANGGRAPH_MODEL,
+    AgentType.COORDINATOR: DEFAULT_LANGGRAPH_MODEL,
 }
 
 
@@ -380,12 +385,19 @@ class Registry:
         """Start all registered agents and wait for them to complete."""
 
         for spec in iter_agent_specs():
+            if spec.name not in self._agent_registry:
+                logger.warning("Agent '%s' is defined in code but not configured in agent_config.yaml. Skipping.", spec.name)
+                continue
             self.start_agent(
                 spec.name,
                 agent_type=spec.agent_type,
                 system_instructions=spec.instructions,
                 tools=list(spec.tools),
             )
+
+        if not self._agent_tasks:
+            logger.warning("No agents were started.")
+            return
 
         await asyncio.gather(*self._agent_tasks.values())
 
@@ -552,13 +564,34 @@ class Registry:
         system_instructions: str,
         tools: list[Any] | None = None,
     ) -> Any:
-        llm = ChatOpenAI(model=model_name)
+        api_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_BASE_URL")
+        logger.info(
+            "Creating ChatOpenAI model '%s' with base_url=%s, api_key_prefix=%s",
+            model_name,
+            base_url,
+            api_key[:6] if api_key else None,
+        )
+        llm = ChatOpenAI(
+            model=model_name,
+            api_key=api_key,
+            base_url=base_url,
+        )
         adapter = LangGraphAdapter(
             llm=llm,
             checkpointer=InMemorySaver(),
             custom_section=build_agent_prompt(system_instructions),
             additional_tools=tools,
         )
+
+        # Dynamically inject the shared history context on_message method
+        import types
+        adapter.agent_id = agent_definition.band_agent_id
+        adapter.id_to_reg_name = {
+            entry.agent_definition.band_agent_id: name
+            for name, entry in self._agent_registry.items()
+        }
+        adapter.on_message = types.MethodType(shared_context_on_message, adapter)
 
         return Agent.create(
             adapter=adapter,
@@ -599,3 +632,420 @@ class Registry:
             return
 
         logger.info("Agent task '%s' completed", name)
+
+
+async def shared_context_on_message(
+    self: Any,
+    msg: Any,
+    tools: Any,
+    history: Any,
+    participants_msg: str | None,
+    contacts_msg: str | None,
+    *,
+    is_session_bootstrap: bool,
+    room_id: str,
+) -> None:
+    # 1. Resolve display name mappings & participant lists first
+    participants_dicts = []
+    try:
+        participants = await tools.get_participants()
+        if isinstance(participants, list):
+            for p in participants:
+                if hasattr(p, "dict"):
+                    participants_dicts.append(p.dict())
+                elif hasattr(p, "model_dump"):
+                    participants_dicts.append(p.model_dump())
+                elif isinstance(p, dict):
+                    participants_dicts.append(p)
+                else:
+                    participants_dicts.append({
+                        "id": getattr(p, "id", None),
+                        "handle": getattr(p, "handle", None),
+                        "name": getattr(p, "name", None),
+                        "type": getattr(p, "type", None),
+                    })
+    except Exception as e:
+        logger.warning("Failed to resolve participants: %s", e)
+
+    id_to_name = {p["id"]: p["name"] for p in participants_dicts}
+
+    # Static fallbacks for names and handles in case of bootstrap sync latency
+    STATIC_ID_TO_NAME = {
+        "6c152b48-4fe7-42eb-9af8-0fe4bc466308": "Orchestrator",
+        "71726d0d-0ebb-4d33-ab26-454ffb5e8b16": "Medior",
+        "6b87ef32-9d5e-4c3d-97d8-eb9871d32d70": "testagent",
+        "0251c040-ee51-4a7b-a2e9-8c2c3adef2a8": "Agent2",
+        "11ed0117-d350-420e-b51c-d58c072c2395": "Agent 3"
+    }
+    STATIC_ID_TO_HANDLE = {
+        "71726d0d-0ebb-4d33-ab26-454ffb5e8b16": "abdulazizgajnazarov/medior",
+        "6b87ef32-9d5e-4c3d-97d8-eb9871d32d70": "abdulazizgajnazarov/testagent",
+        "0251c040-ee51-4a7b-a2e9-8c2c3adef2a8": "abdulazizgajnazarov/agent2",
+        "11ed0117-d350-420e-b51c-d58c072c2395": "abdulazizgajnazarov/agent-3",
+        "6c152b48-4fe7-42eb-9af8-0fe4bc466308": "abdulazizgajnazarov/research_planner"
+    }
+
+    # Merge static fallback name mappings if not present
+    for uid, sname in STATIC_ID_TO_NAME.items():
+        if uid not in id_to_name:
+            id_to_name[uid] = sname
+
+    # Synthesize participants in participants_dicts if missing or empty
+    existing_p_ids = {p.get("id") for p in participants_dicts if p.get("id")}
+    for uid, sname in STATIC_ID_TO_NAME.items():
+        if uid not in existing_p_ids:
+            participants_dicts.append({
+                "id": uid,
+                "handle": STATIC_ID_TO_HANDLE.get(uid),
+                "name": sname,
+                "type": "Agent" if uid != "6c152b48-4fe7-42eb-9af8-0fe4bc466308" else "User"
+            })
+
+    # Resolve UUID mentions in the incoming msg
+    from band.runtime.formatters import replace_uuid_mentions
+    import dataclasses
+    try:
+        content_resolved = replace_uuid_mentions(msg.content, participants_dicts)
+        msg = dataclasses.replace(msg, content=content_resolved)
+    except Exception as e:
+        logger.warning("Failed to resolve UUID mentions in msg: %s", e)
+
+    # 2. Fetch fresh room context directly from API
+    try:
+        res = await tools.fetch_room_context(room_id=room_id, page_size=100)
+        raw_msgs = res.get("data", [])
+    except Exception as e:
+        logger.warning("Failed to fetch fresh room context: %s", e)
+        raw_msgs = []
+
+    # 3. Extract parsed messages from raw context, resolving UUID mentions
+    parsed_msgs = []
+    for item in raw_msgs:
+        msg_type = item.get("message_type")
+        if msg_type == "text":
+            sender = item.get("sender_name")
+            content = item.get("content", "")
+            if participants_dicts:
+                content = replace_uuid_mentions(content, participants_dicts)
+            parsed_msgs.append({"sender": sender, "content": content})
+
+    current_agent_name = id_to_name.get(self.agent_id, getattr(self, "agent_name", "Assistant"))
+
+    # Ensure current message is in parsed_msgs
+    if msg and not any(m.get("content") == msg.content for m in parsed_msgs):
+        sender = id_to_name.get(msg.sender_id, msg.sender_name or msg.sender_type)
+        parsed_msgs.append({"sender": sender, "content": msg.content})
+
+    # Build a participant identity mapping message to help planner/agents identify roles
+    identity_mapping = ["Here is the identity mapping for all agents in this chat room:"]
+    id_to_reg_name = getattr(self, "id_to_reg_name", {})
+    from agents.band.registry import _agent_specs, AgentType
+    for p in participants_dicts:
+        p_id = p.get("id")
+        p_handle = p.get("handle")
+        p_name = id_to_name.get(p_id, p.get("name", ""))
+        reg_name = id_to_reg_name.get(p_id)
+        if reg_name and p_handle:
+            spec = _agent_specs.get(reg_name)
+            if spec:
+                role_desc = ""
+                if spec.agent_type == AgentType.ORCHESTRATOR:
+                    role_desc = "Orchestrator (Planner)"
+                elif spec.agent_type == AgentType.RESEARCHER:
+                    role_desc = f"Specialist Researcher ({reg_name})"
+                elif spec.agent_type == AgentType.COORDINATOR:
+                    role_desc = "Medior (Coordinator)"
+                identity_mapping.append(f"- @{p_handle} ({p_name}): {role_desc}")
+    identity_mapping_str = "\n".join(identity_mapping) if len(identity_mapping) > 1 else ""
+
+    # 4. Gating and Stage Instruction Injection Logic
+    from agents.band.registry import _agent_specs, AgentType
+    planner_names = [name for name, spec in _agent_specs.items() if spec.agent_type == AgentType.ORCHESTRATOR]
+    researcher_names = [name for name, spec in _agent_specs.items() if spec.agent_type == AgentType.RESEARCHER]
+    coordinator_names = [name for name, spec in _agent_specs.items() if spec.agent_type == AgentType.COORDINATOR]
+
+    # Map participant display names to their spec type lists
+    planner_display_names = []
+    researcher_display_names = []
+    coordinator_display_names = []
+
+    all_agent_ids = set(id_to_reg_name.keys()) | set(STATIC_ID_TO_NAME.keys())
+    for p_id in all_agent_ids:
+        p_name = id_to_name.get(p_id)
+        if not p_name:
+            continue
+        reg_name = id_to_reg_name.get(p_id)
+        if not reg_name:
+            # Fallback reg_name from static mapping if not in registry
+            if p_id == "6c152b48-4fe7-42eb-9af8-0fe4bc466308":
+                reg_name = "research_planner"
+            elif p_id == "71726d0d-0ebb-4d33-ab26-454ffb5e8b16":
+                reg_name = "medior"
+            elif p_id == "6b87ef32-9d5e-4c3d-97d8-eb9871d32d70":
+                reg_name = "researcher_1"
+            elif p_id == "0251c040-ee51-4a7b-a2e9-8c2c3adef2a8":
+                reg_name = "researcher_2"
+            elif p_id == "11ed0117-d350-420e-b51c-d58c072c2395":
+                reg_name = "researcher_3"
+
+        if reg_name:
+            if reg_name in planner_names:
+                if p_name not in planner_display_names:
+                    planner_display_names.append(p_name)
+            elif reg_name in researcher_names:
+                if p_name not in researcher_display_names:
+                    researcher_display_names.append(p_name)
+            elif reg_name in coordinator_names:
+                if p_name not in coordinator_display_names:
+                    coordinator_display_names.append(p_name)
+
+    # Fallback to config keys if participant list is empty or names unresolved
+    if not planner_display_names:
+        planner_display_names = planner_names
+    if not researcher_display_names:
+        researcher_display_names = researcher_names
+    if not coordinator_display_names:
+        coordinator_display_names = coordinator_names
+
+    stage_instruction = ""
+    
+    # Resolve handles for stage prompt rendering
+    medior_handle = ""
+    researcher_handles_list = []
+    for p in participants_dicts:
+        p_id = p.get("id")
+        p_handle = p.get("handle")
+        if not p_handle:
+            continue
+        p_name = id_to_name.get(p_id, p.get("name", ""))
+        if p_name in coordinator_display_names:
+            medior_handle = f"@{p_handle}"
+        elif p_name in researcher_display_names:
+            researcher_handles_list.append(f"@{p_handle}")
+    active_researcher_handles = ", ".join(researcher_handles_list)
+
+    # 4a. Compute session boundary: find the index of the last user message
+    last_user_msg_idx = max(
+        (i for i, m in enumerate(parsed_msgs) 
+         if m["sender"] not in planner_display_names 
+         and m["sender"] not in researcher_display_names 
+         and m["sender"] not in coordinator_display_names 
+         and m["sender"] != "System"),
+        default=-1
+    )
+
+    # Find first Medior message in the current session (after last user message)
+    medior_first_msg_idx = next(
+        (i for i, m in enumerate(parsed_msgs) 
+         if i > last_user_msg_idx and m["sender"] in coordinator_display_names),
+        None
+    )
+
+    final_synthesis_posted = False
+    if medior_first_msg_idx is not None:
+        # Check if all researchers have debated in the current session
+        all_debated = True
+        for r_name in researcher_display_names:
+            r_deb = [
+                m for m in parsed_msgs[medior_first_msg_idx + 1:] 
+                if m["sender"] == r_name
+            ]
+            if not r_deb:
+                all_debated = False
+                break
+        if all_debated:
+            # Find the last debate message index from researchers in the current session
+            last_deb_idx = max(
+                (i for i, m in enumerate(parsed_msgs) 
+                 if i > medior_first_msg_idx and m["sender"] in researcher_display_names),
+                default=-1
+            )
+            # If coordinator posted after last_deb_idx, then final synthesis is posted
+            if last_deb_idx != -1 and any(
+                m["sender"] in coordinator_display_names 
+                for m in parsed_msgs[last_deb_idx + 1:]
+            ):
+                final_synthesis_posted = True
+
+    if final_synthesis_posted:
+        logger.info("Pipeline Gating (%s): SILENT. Final synthesis has already been posted.", current_agent_name)
+        return
+
+    if current_agent_name in planner_display_names:
+        planner_msgs = [
+            m for m in parsed_msgs[last_user_msg_idx + 1:] 
+            if m["sender"] == current_agent_name
+        ]
+        if planner_msgs:
+            logger.info("Planner Gating (%s): SILENT. Plan already posted.", current_agent_name)
+            return
+        logger.info("Planner Gating (%s): ACTIVE. Creating plan.", current_agent_name)
+        
+    elif current_agent_name in researcher_display_names:
+        my_msgs = [
+            m for m in parsed_msgs[last_user_msg_idx + 1:] 
+            if m["sender"] == current_agent_name
+        ]
+        if not my_msgs:
+            # Check if planner has posted a topic assignment
+            planner_posted = any(
+                m["sender"] in planner_display_names 
+                for m in parsed_msgs[last_user_msg_idx + 1:]
+            )
+            if planner_posted:
+                logger.info("Researcher Gating (%s): ACTIVE. Running initial search.", current_agent_name)
+                stage_instruction = (
+                    "ACTIVE WORKFLOW STAGE: INITIAL SEARCH\n\n"
+                    "You must perform a web search on the subtopic assigned to you by the planner using the 'perplexity_search' tool. "
+                    f"Summarize your findings and post them using 'band_send_message', mentioning the Coordinator (medior) handle ({medior_handle}).\n\n"
+                    "CRITICAL RATE LIMIT RULE: To respect API rate limits, you MUST limit yourself to a maximum of 1 or 2 high-quality web searches total using the 'perplexity_search' tool. Choose your search queries carefully and do NOT make excessive search calls."
+                )
+            else:
+                logger.info("Researcher Gating (%s): SILENT. Waiting for planner topic assignment.", current_agent_name)
+                return
+        else:
+            # Already posted initial search. Has coordinator triggered debate?
+            if medior_first_msg_idx is not None:
+                # Count my debate messages after the coordinator's last message
+                my_debate_msgs = [
+                    m for m in parsed_msgs[medior_first_msg_idx + 1:] 
+                    if m["sender"] == current_agent_name
+                ]
+                if not my_debate_msgs:
+                    logger.info("Researcher Gating (%s): ACTIVE. Running debate contribution.", current_agent_name)
+                    stage_instruction = (
+                        "ACTIVE WORKFLOW STAGE: DEBATE\n\n"
+                        "The coordinator has triggered the debate. "
+                        "You must read the other researchers' findings in the chat history, and post a message comparing your findings with theirs, pointing out agreements, disagreements, gaps, or confirmations. "
+                        f"You MUST mention both the Coordinator (medior) handle ({medior_handle}) and the other Research Agents by their handles ({active_researcher_handles}) in your message. Mentioning medior is critical to wake him up for the final synthesis."
+                    )
+                else:
+                    logger.info("Researcher Gating (%s): SILENT. Already participated in debate.", current_agent_name)
+                    return
+            else:
+                logger.info("Researcher Gating (%s): SILENT. Waiting for coordinator debate trigger.", current_agent_name)
+                return
+                
+    elif current_agent_name in coordinator_display_names:
+        # Check if all researchers have posted initial findings in current session
+        all_researchers_posted_initial = True
+        missing_initial_researchers = []
+        for r_name in researcher_display_names:
+            r_msgs = [
+                m for m in parsed_msgs[last_user_msg_idx + 1:] 
+                if m["sender"] == r_name
+            ]
+            if not r_msgs:
+                all_researchers_posted_initial = False
+                missing_initial_researchers.append(r_name)
+        
+        if not all_researchers_posted_initial:
+            logger.info("Coordinator Gating (%s): SILENT. Waiting for researchers %s to post initial findings.", current_agent_name, missing_initial_researchers)
+            return
+ 
+        if medior_first_msg_idx is None:
+            logger.info("Coordinator Gating (%s): ACTIVE. Triggering debate.", current_agent_name)
+            stage_instruction = (
+                "ACTIVE WORKFLOW STAGE: DEBATE TRIGGER\n\n"
+                "All Research Agents have posted their initial search findings. "
+                "Your task in this turn is to trigger the debate among them. "
+                "You MUST read their initial findings, identify the main agreements, contradictions, or gaps in their research, "
+                f"and post a message asking the Research Agents to compare their findings and debate those specific points. "
+                f"You MUST mention all active Research Agents by their handles: {active_researcher_handles}.\n\n"
+                "CRITICAL: Do NOT write the final answer yourself yet. Focus on highlighting what they should compare and debate."
+            )
+        else:
+            all_researchers_debated = True
+            missing_debate_researchers = []
+            for r_name in researcher_display_names:
+                r_debate_msgs = [
+                    m for m in parsed_msgs[medior_first_msg_idx + 1:]
+                    if m["sender"] == r_name
+                ]
+                if not r_debate_msgs:
+                    all_researchers_debated = False
+                    missing_debate_researchers.append(r_name)
+            
+            if not all_researchers_debated:
+                logger.info("Coordinator Gating (%s): SILENT. Waiting for researchers %s to participate in debate.", current_agent_name, missing_debate_researchers)
+                return
+            
+            logger.info("Coordinator Gating (%s): ACTIVE. Ready to synthesize.", current_agent_name)
+            human_handle = ""
+            for p in participants_dicts:
+                if p.get("type") == "User":
+                    human_handle = f"@{p.get('handle')}"
+                    break
+            if not human_handle:
+                human_handle = "@User"
+ 
+            stage_instruction = (
+                "ACTIVE WORKFLOW STAGE: FINAL SYNTHESIS\n\n"
+                "The debate phase is complete. "
+                "Your ONLY task in this turn is to synthesize all findings and debate points into a single, comprehensive, and well-structured final answer. "
+                f"Address and mention the human user ({human_handle}) who asked the question. "
+                "Do NOT ask the researchers to debate anymore. Summarize and synthesize the consensus and differences."
+            )
+
+    # 5. Build message list for LLM
+    messages = []
+    if self._inject_system_prompt and self._system_prompt:
+        messages.append(("system", self._system_prompt))
+        
+    if identity_mapping_str:
+        messages.append(("system", identity_mapping_str))
+        
+    # Reconstruct room history except current message
+    history_pms = parsed_msgs[:-1] if parsed_msgs and parsed_msgs[-1]["content"] == msg.content else parsed_msgs
+    for pm in history_pms:
+        sender = pm["sender"]
+        content = pm["content"]
+        if sender == current_agent_name:
+            messages.append(("assistant", content))
+        else:
+            messages.append(("user", f"[{sender}]: {content}"))
+
+    if participants_msg:
+        messages.append(("user", f"[System]: {participants_msg}"))
+
+    if contacts_msg:
+        messages.append(("user", f"[System]: {contacts_msg}"))
+
+    if stage_instruction:
+        messages.append(("system", stage_instruction))
+
+    messages.append(("user", msg.format_for_llm()))
+    graph_input = {"messages": messages}
+
+    # 6. Execute with unique thread_id
+    import uuid
+    run_thread_id = f"{room_id}_{uuid.uuid4()}"
+    
+    from band.integrations.langgraph.langchain_tools import agent_tools_to_langchain
+    langchain_tools = agent_tools_to_langchain(tools, features=self.features) + self.additional_tools
+
+    if self.graph_factory:
+        graph = self.graph_factory(langchain_tools)
+    else:
+        graph = self._static_graph
+
+    if not graph:
+        raise RuntimeError("No graph available")
+
+    # Save checkpointer if needed
+    checkpointer = getattr(graph, "checkpointer", None) or self._simple_checkpointer
+    if checkpointer is not None:
+        self._room_checkpointers[room_id] = checkpointer
+
+    await graph.ainvoke(
+        graph_input,
+        config={
+            "configurable": {
+                "thread_id": run_thread_id,
+                },
+            "recursion_limit": self.recursion_limit,
+        },
+    )
+
+    if is_session_bootstrap and room_id not in self._bootstrapped_rooms:
+        self._bootstrapped_rooms[room_id] = None

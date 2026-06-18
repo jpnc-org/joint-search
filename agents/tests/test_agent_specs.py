@@ -177,6 +177,7 @@ def test_all_top_level_agent_modules_register_default_specs(
         "agents.definitions.research_planner",
         "agents.definitions.researcher",
         "agents.definitions.test_tool_agent",
+        "agents.definitions.medior",
     ):
         monkeypatch.delitem(sys.modules, module_name, raising=False)
 
@@ -190,6 +191,7 @@ def test_all_top_level_agent_modules_register_default_specs(
         "researcher_2",
         "researcher_3",
         "test_tool_agent",
+        "medior",
     ]
     assert specs[0].agent_type is AgentType.ORCHESTRATOR
     assert "Break the user's question into researchable subtopics" in (
@@ -203,6 +205,8 @@ def test_all_top_level_agent_modules_register_default_specs(
     assert specs[4].tools[0].name == "echo"
     assert "Args:" in specs[4].tools[0].description
     assert "message:" in specs[4].tools[0].description
+    assert specs[5].agent_type is AgentType.COORDINATOR
+    assert "coordinate the research by prompting the Research Agents to debate" in specs[5].instructions
     for spec in specs[:4]:
         assert "\n\n" in spec.instructions
         assert not spec.instructions.startswith(" ")
