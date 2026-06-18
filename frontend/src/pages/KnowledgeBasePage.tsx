@@ -273,21 +273,23 @@ export default function KnowledgeBasePage() {
           <Button onClick={() => navigate('/chat')} variant="ghost" size="icon" className="size-8 shrink-0 cursor-pointer">
             <ArrowLeft className="size-4" />
           </Button>
-          <Select
-            value={activeKBId ?? ''}
-            onValueChange={selectKB}
-          >
-            <SelectTrigger className="w-[240px]">
-              <SelectValue placeholder="Select a knowledge base" />
-            </SelectTrigger>
-            <SelectContent>
-              {knowledgeBases.map((kb) => (
-                <SelectItem key={kb.id} value={kb.id}>
-                  <span>{kb.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {knowledgeBases.length > 0 && (
+            <Select
+              value={activeKBId ?? ''}
+              onValueChange={selectKB}
+            >
+              <SelectTrigger className="w-[240px]">
+                <SelectValue placeholder="Select a knowledge base" />
+              </SelectTrigger>
+              <SelectContent>
+                {knowledgeBases.map((kb) => (
+                  <SelectItem key={kb.id} value={kb.id}>
+                    <span>{kb.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button onClick={() => setShowCreateDialog(true)} variant="outline" size="sm" className="cursor-pointer">
             <Plus className="size-3.5" /> New Knowledge Base
           </Button>
@@ -304,8 +306,17 @@ export default function KnowledgeBasePage() {
         </div>
 
         {!activeKBId ? (
-          <div className="flex flex-1 items-center justify-center">
-            <p className="text-muted-foreground">Select or create a knowledge base.</p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-4">
+            {knowledgeBases.length === 0 ? (
+              <>
+                <p className="text-muted-foreground">No knowledge bases yet.</p>
+                <Button onClick={() => setShowCreateDialog(true)} className="cursor-pointer">
+                  <Plus className="size-4" /> Create Knowledge Base
+                </Button>
+              </>
+            ) : (
+              <p className="text-muted-foreground">Select a knowledge base.</p>
+            )}
           </div>
         ) : (
           <>
