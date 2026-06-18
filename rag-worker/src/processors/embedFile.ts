@@ -15,7 +15,7 @@ export async function processEmbedFile(fileId: string): Promise<void> {
 
   const fileBuffer = await downloadFromS3(file.s3_key);
 
-  const text = await extractText(fileBuffer, file.mime_type);
+  const text = await extractText(fileBuffer, file.mime_type, file.original_name);
 
   const chunks = chunkText(text);
   if (chunks.length === 0) {

@@ -10,25 +10,23 @@ const TEXT_MIME_TYPES = new Set([
 export async function extractText(
   fileBuffer: Buffer,
   mimeType: string,
+  fileName: string,
 ): Promise<string> {
   if (TEXT_MIME_TYPES.has(mimeType)) {
     return fileBuffer.toString('utf-8');
   }
 
   const formData = new FormData();
-  const blob = new Blob([fileBuffer]);
-  formData.append('file', blob, 'document');
-  formData.append(
-    'options',
-    JSON.stringify({ to_formats: ['markdown'] }),
-  );
+  const blob = new Blob([fileBuffer], { type: mimeType });
+  formData.append('files', blob, fileName);
+  formData.append('to_formats', 'md');
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 300_000);
 
   try {
     const response = await fetch(
-      `${env.DOCLING_SERVE_URL}/v1alpha/convert/source`,
+      `${env.DOCLING_SERVE_URL}/v1/convert/file`,
       {
         method: 'POST',
         body: formData,
