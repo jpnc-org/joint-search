@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from inspect import cleandoc
 
-from agents.band.registry import AgentType, RegistryAgent, agent
+from agents.band.registry import AgentType, agent
 
 
 @agent(
@@ -13,7 +13,7 @@ from agents.band.registry import AgentType, RegistryAgent, agent
     ),
     agent_type=AgentType.RESEARCHER,
 )
-class ResearcherAgent(RegistryAgent):
+class ResearcherAgent:
     @classmethod
     def instructions(cls) -> str:
         return cleandoc(

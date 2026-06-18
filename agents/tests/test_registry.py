@@ -49,11 +49,15 @@ def install_fake_langgraph_runtime(
             llm: FakeChatOpenAI,
             checkpointer: FakeInMemorySaver,
             custom_section: str,
+            additional_tools: list[Any] | None = None,
         ) -> None:
             created_values.setdefault("adapters", []).append(self)
             created_values.setdefault("adapter_llms", []).append(llm)
             created_values.setdefault("adapter_checkpointers", []).append(checkpointer)
             created_values.setdefault("custom_sections", []).append(custom_section)
+            created_values.setdefault("additional_tools", []).append(
+                additional_tools or []
+            )
 
     monkeypatch.setattr("agents.band.registry.ChatOpenAI", FakeChatOpenAI)
     monkeypatch.setattr("agents.band.registry.InMemorySaver", FakeInMemorySaver)
@@ -437,6 +441,44 @@ def test_start_agent_builds_and_runs_langgraph_agent_in_background(
         assert stop_calls == [registry_module.AGENT_STOP_TIMEOUT_SECONDS]
         assert "Starting agent task 'agent_a'" in caplog.text
         assert "Agent task 'agent_a' stopped" in caplog.text
+
+    asyncio.run(scenario())
+
+
+def test_start_agent_passes_tools_to_adapter(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        registry = build_registry_without_loading_config()
+        register_agent(registry)
+        created: dict[str, Any] = {}
+        started = asyncio.Event()
+
+        class FakeBandAgent:
+            @classmethod
+            def create(cls, **kwargs: Any) -> "FakeBandAgent":
+                return cls()
+
+            async def run(self, shutdown_timeout: float | None = 30.0) -> None:
+                started.set()
+                await asyncio.Event().wait()
+
+        install_fake_langgraph_runtime(monkeypatch, FakeBandAgent, created)
+
+        fake_tool = type("FakeTool", (), {"name": "search_web"})()
+
+        registry.start_agent(
+            "agent_a",
+            tools=[fake_tool],
+        )
+        task = registry._agent_tasks["agent_a"]
+        await started.wait()
+
+        assert created["additional_tools"] == [[fake_tool]]
+
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
 
     asyncio.run(scenario())
 

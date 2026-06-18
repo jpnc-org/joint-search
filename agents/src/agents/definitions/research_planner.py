@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from inspect import cleandoc
 
-from agents.band.registry import AgentType, RegistryAgent, agent
+from agents.band.registry import AgentType, agent
 
 
 @agent(names=("research_planner",), agent_type=AgentType.ORCHESTRATOR)
-class ResearchPlannerAgent(RegistryAgent):
+class ResearchPlannerAgent:
     @classmethod
     def instructions(cls) -> str:
         return cleandoc(

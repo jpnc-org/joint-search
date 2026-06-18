@@ -22,10 +22,13 @@ import yaml
 from band import Agent
 from band.adapters import LangGraphAdapter
 from band.config import load_agent_config
+from langchain_core.tools import BaseTool
+from langchain_core.tools import tool as _langchain_tool
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 
 DEFAULT_LANGGRAPH_MODEL = "deepseek/deepseek-v4-flash"
+_AGENT_TOOL_MARKER = "_agent_tool"
 BAND_TOOL_CALL_INSTRUCTIONS = cleandoc(
     """
     Every answer to a Band message must be delivered by a tool call named
@@ -163,51 +166,52 @@ class AgentSpec:
         agent_type: Domain behavior category passed into ``start_agent``.
         instructions: Role-specific prompt text. Band delivery instructions are
             appended later by ``build_agent_prompt``.
+        tools: LangChain tools available to this agent.
     """
 
     name: str
     agent_type: AgentType
     instructions: str
+    tools: tuple[Any, ...] = ()
 
 
 _agent_specs: dict[str, AgentSpec] = {}
 
 
-class RegistryAgent:
-    """Base class for code-defined local agents.
-
-    Subclasses must be decorated with ``@agent(...)`` to register themselves.
-    Keep shared behavior here as the local agent model grows.
-    """
-
-    @classmethod
-    def instructions(cls) -> str:
-        """Return role-specific instructions for this local agent."""
-
-        return ""
+AgentClass = TypeVar("AgentClass", bound=type)
 
 
-AgentClass = TypeVar("AgentClass", bound=type[RegistryAgent])
+def _mark_agent_tool(tool_function: Any) -> Any:
+    if isinstance(tool_function, (classmethod, staticmethod)):
+        setattr(tool_function.__func__, _AGENT_TOOL_MARKER, True)
+        return tool_function
+
+    setattr(tool_function, _AGENT_TOOL_MARKER, True)
+    return tool_function
 
 
-def agent(
-    *,
-    names: Sequence[str],
-    agent_type: AgentType,
-) -> Callable[[AgentClass], AgentClass]:
-    """Register a ``RegistryAgent`` class for one or more local agent names."""
+class agent:
+    """Register an agent class for one or more local agent names."""
 
-    normalized_names = _normalize_agent_names(names)
+    tool = staticmethod(_mark_agent_tool)
 
-    def decorator(agent_class: AgentClass) -> AgentClass:
-        _register_agent_class(
-            agent_class,
-            names=normalized_names,
-            agent_type=agent_type,
-        )
-        return agent_class
+    def __new__(
+        cls,
+        *,
+        names: Sequence[str],
+        agent_type: AgentType,
+    ) -> Callable[[AgentClass], AgentClass]:
+        normalized_names = _normalize_agent_names(names)
 
-    return decorator
+        def decorator(agent_class: AgentClass) -> AgentClass:
+            _register_agent_class(
+                agent_class,
+                names=normalized_names,
+                agent_type=agent_type,
+            )
+            return agent_class
+
+        return decorator
 
 
 def iter_agent_specs() -> tuple[AgentSpec, ...]:
@@ -217,17 +221,19 @@ def iter_agent_specs() -> tuple[AgentSpec, ...]:
 
 
 def _register_agent_class(
-    agent_class: type[RegistryAgent],
+    agent_class: type[Any],
     *,
     names: tuple[str, ...],
     agent_type: AgentType,
 ) -> None:
     instructions = _load_agent_instructions(agent_class.instructions())
+    tools = _load_agent_tools(agent_class)
     specs = tuple(
         AgentSpec(
             name=name,
             agent_type=agent_type,
             instructions=instructions,
+            tools=tools,
         )
         for name in names
     )
@@ -238,6 +244,43 @@ def _register_agent_class(
 
     for spec in specs:
         _agent_specs[spec.name] = spec
+
+
+def _load_agent_tools(agent_class: type[Any]) -> tuple[BaseTool, ...]:
+    tools: list[BaseTool] = []
+    instance: Any | None = None
+
+    for name, value in vars(agent_class).items():
+        if isinstance(value, BaseTool):
+            tools.append(value)
+            continue
+
+        if not _is_marked_agent_tool(value):
+            continue
+
+        if isinstance(value, (classmethod, staticmethod)):
+            tool_callable = getattr(agent_class, name)
+        else:
+            if instance is None:
+                try:
+                    instance = agent_class()
+                except TypeError as exc:
+                    raise ValueError(
+                        "Agent classes with instance tools must be instantiable "
+                        "without arguments."
+                    ) from exc
+            tool_callable = getattr(instance, name)
+
+        tools.append(_langchain_tool(tool_callable))
+
+    return tuple(tools)
+
+
+def _is_marked_agent_tool(value: Any) -> bool:
+    if isinstance(value, (classmethod, staticmethod)):
+        return bool(getattr(value.__func__, _AGENT_TOOL_MARKER, False))
+
+    return bool(getattr(value, _AGENT_TOOL_MARKER, False))
 
 
 def _normalize_agent_names(names: Sequence[str]) -> tuple[str, ...]:
@@ -341,6 +384,7 @@ class Registry:
                 spec.name,
                 agent_type=spec.agent_type,
                 system_instructions=spec.instructions,
+                tools=list(spec.tools),
             )
 
         await asyncio.gather(*self._agent_tasks.values())
@@ -408,6 +452,7 @@ class Registry:
         agent_type: AgentType = AgentType.GENERAL_PURPOSE,
         model_name: str | None = None,
         system_instructions: str = "",
+        tools: list[Any] | None = None,
         shutdown_timeout: float | None = 30.0,
     ) -> None:
         """Start one registered agent in the background.
@@ -424,6 +469,8 @@ class Registry:
                 selected from ``agent_type``.
             system_instructions: Additional instructions passed into the
                 LangGraph adapter custom section.
+            tools: Optional list of LangChain tools to make available to the
+                agent.
             shutdown_timeout: Timeout passed through to ``Agent.run`` when the
                 task shuts down.
 
@@ -462,6 +509,7 @@ class Registry:
                         agent_definition=agent_definition,
                         model_name=resolved_model_name,
                         system_instructions=system_instructions,
+                        tools=tools,
                     )
                     try:
                         await agent.run(shutdown_timeout=shutdown_timeout)
@@ -502,12 +550,14 @@ class Registry:
         agent_definition: AgentDefinition,
         model_name: str,
         system_instructions: str,
+        tools: list[Any] | None = None,
     ) -> Any:
         llm = ChatOpenAI(model=model_name)
         adapter = LangGraphAdapter(
             llm=llm,
             checkpointer=InMemorySaver(),
             custom_section=build_agent_prompt(system_instructions),
+            additional_tools=tools,
         )
 
         return Agent.create(

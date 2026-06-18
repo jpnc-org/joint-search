@@ -7,7 +7,7 @@ import pytest
 from pytest import MonkeyPatch
 
 import agents.band.registry as registry_module
-from agents.band.registry import AgentSpec, AgentType, RegistryAgent, agent
+from agents.band.registry import AgentSpec, AgentType, agent
 
 
 def clear_agent_specs(monkeypatch: MonkeyPatch) -> None:
@@ -22,7 +22,7 @@ def test_agent_decorator_registers_one_name(monkeypatch: MonkeyPatch) -> None:
     clear_agent_specs(monkeypatch)
 
     @agent(names=("example_agent",), agent_type=AgentType.RESEARCHER)
-    class ExampleAgent(RegistryAgent):
+    class ExampleAgent:
         @classmethod
         def instructions(cls) -> str:
             return "Research instructions."
@@ -43,7 +43,7 @@ def test_agent_decorator_registers_multiple_names(
     clear_agent_specs(monkeypatch)
 
     @agent(names=("research_a", "research_b"), agent_type=AgentType.RESEARCHER)
-    class ResearchAgent(RegistryAgent):
+    class ResearchAgent:
         @classmethod
         def instructions(cls) -> str:
             return "Shared research instructions."
@@ -68,7 +68,7 @@ def test_undecorated_registry_agent_subclass_does_not_register(
 ) -> None:
     clear_agent_specs(monkeypatch)
 
-    class ExampleAgent(RegistryAgent):
+    class ExampleAgent:
         @classmethod
         def instructions(cls) -> str:
             return "Research instructions."
@@ -85,7 +85,7 @@ def test_agent_decorator_rejects_empty_names(
     with pytest.raises(ValueError, match="at least one"):
 
         @agent(names=(), agent_type=AgentType.RESEARCHER)
-        class EmptyNamesAgent(RegistryAgent):
+        class EmptyNamesAgent:
             pass
 
 
@@ -97,7 +97,7 @@ def test_agent_decorator_rejects_empty_name_strings(
     with pytest.raises(ValueError, match="non-empty"):
 
         @agent(names=("example_agent", " "), agent_type=AgentType.RESEARCHER)
-        class EmptyNameAgent(RegistryAgent):
+        class EmptyNameAgent:
             pass
 
 
@@ -107,7 +107,7 @@ def test_agent_decorator_rejects_duplicate_names(
     clear_agent_specs(monkeypatch)
 
     @agent(names=("example_agent",), agent_type=AgentType.RESEARCHER)
-    class ExampleAgent(RegistryAgent):
+    class ExampleAgent:
         @classmethod
         def instructions(cls) -> str:
             return "Research instructions."
@@ -115,7 +115,7 @@ def test_agent_decorator_rejects_duplicate_names(
     with pytest.raises(ValueError, match="already registered"):
 
         @agent(names=("example_agent",), agent_type=AgentType.GENERAL_PURPOSE)
-        class DuplicateAgent(RegistryAgent):
+        class DuplicateAgent:
             @classmethod
             def instructions(cls) -> str:
                 return "General instructions."
@@ -129,7 +129,7 @@ def test_agent_decorator_rejects_empty_instructions(
     with pytest.raises(ValueError, match="instructions"):
 
         @agent(names=("example_agent",), agent_type=AgentType.RESEARCHER)
-        class EmptyPromptAgent(RegistryAgent):
+        class EmptyPromptAgent:
             @classmethod
             def instructions(cls) -> str:
                 return " "
@@ -141,7 +141,7 @@ def test_decorated_registry_agent_can_add_agent_specific_methods(
     clear_agent_specs(monkeypatch)
 
     @agent(names=("research_planner",), agent_type=AgentType.ORCHESTRATOR)
-    class ResearchPlanner(RegistryAgent):
+    class ResearchPlanner:
         @classmethod
         def instructions(cls) -> str:
             return "Planning instructions."
@@ -176,6 +176,7 @@ def test_all_top_level_agent_modules_register_default_specs(
         "agents.definitions",
         "agents.definitions.research_planner",
         "agents.definitions.researcher",
+        "agents.definitions.test_tool_agent",
     ):
         monkeypatch.delitem(sys.modules, module_name, raising=False)
 
@@ -188,17 +189,105 @@ def test_all_top_level_agent_modules_register_default_specs(
         "researcher_1",
         "researcher_2",
         "researcher_3",
+        "test_tool_agent",
     ]
     assert specs[0].agent_type is AgentType.ORCHESTRATOR
     assert "Break the user's question into researchable subtopics" in (
         specs[0].instructions
     )
     assert "do not research the subtopics yourself" in specs[0].instructions
-    for spec in specs[1:]:
+    for spec in specs[1:4]:
         assert spec.agent_type is AgentType.RESEARCHER
         assert "research the subtopics assigned to you" in spec.instructions
-    for spec in specs:
+    assert specs[4].agent_type is AgentType.GENERAL_PURPOSE
+    assert specs[4].tools[0].name == "echo"
+    assert "Args:" in specs[4].tools[0].description
+    assert "message:" in specs[4].tools[0].description
+    for spec in specs[:4]:
         assert "\n\n" in spec.instructions
         assert not spec.instructions.startswith(" ")
         assert "band_send_message" not in spec.instructions
         assert "tool call" not in spec.instructions
+
+
+def test_agent_tool_decorator_creates_tool(monkeypatch: MonkeyPatch) -> None:
+    clear_agent_specs(monkeypatch)
+
+    @agent.tool
+    def search_web(query: str) -> str:
+        """Search the web for information."""
+        return f"results for {query}"
+
+    assert search_web("python") == "results for python"
+    assert getattr(search_web, "_agent_tool", False) is True
+
+
+def test_agent_class_with_inline_tools_registers_them_in_spec(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    clear_agent_specs(monkeypatch)
+
+    @agent(names=("tool_agent",), agent_type=AgentType.RESEARCHER)
+    class ToolAgent:
+        @agent.tool
+        def search_web(self, query: str) -> str:
+            """Search the web for information."""
+            return f"results for {query}"
+
+        @classmethod
+        def instructions(cls) -> str:
+            return "Tool agent instructions."
+
+    specs = registry_module.iter_agent_specs()
+    assert len(specs) == 1
+    assert specs[0].name == "tool_agent"
+    assert len(specs[0].tools) == 1
+    search_tool = specs[0].tools[0]
+    assert search_tool.name == "search_web"
+    assert "self" not in search_tool.args
+    assert set(search_tool.args) == {"query"}
+    assert search_tool.invoke({"query": "python"}) == "results for python"
+
+
+def test_agent_class_without_tools_has_empty_tools(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    clear_agent_specs(monkeypatch)
+
+    @agent(names=("plain_agent",), agent_type=AgentType.RESEARCHER)
+    class PlainAgent:
+        @classmethod
+        def instructions(cls) -> str:
+            return "Plain instructions."
+
+    specs = registry_module.iter_agent_specs()
+    assert specs[0].tools == ()
+
+
+def test_agent_class_with_multiple_inline_tools_registers_all(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    clear_agent_specs(monkeypatch)
+
+    @agent(names=("multi_tool_agent",), agent_type=AgentType.RESEARCHER)
+    class MultiToolAgent:
+        @agent.tool
+        def search_web(self, query: str) -> str:
+            """Search the web."""
+            return query
+
+        @agent.tool
+        def read_url(self, url: str) -> str:
+            """Read content from a URL."""
+            return url
+
+        @classmethod
+        def instructions(cls) -> str:
+            return "Multi-tool instructions."
+
+    specs = registry_module.iter_agent_specs()
+    assert len(specs[0].tools) == 2
+    tool_names = {t.name for t in specs[0].tools}
+    assert tool_names == {"search_web", "read_url"}
+    for tool in specs[0].tools:
+        assert "self" not in tool.args
