@@ -4,7 +4,6 @@ import { NodeGraphBackground } from "../components/NodeGraphBackground";
 
 export default function FinalScene() {
   const frame = useCurrentFrame();
-  const starTiltDegrees = 10;
   const opacity = interpolate(frame, [0, 28], [0, 1], {
     easing: Easing.out(Easing.cubic),
     extrapolateLeft: "clamp",
@@ -15,34 +14,44 @@ export default function FinalScene() {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const rotation = interpolate(
-    frame,
-    [0, 76],
-    [starTiltDegrees, 360 + starTiltDegrees],
-    {
+  const spinRotation = interpolate(frame, [0, 76], [0, 360], {
     easing: Easing.bezier(0.68, 0, 0.22, 1),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
-    },
-  );
-  const pulse = interpolate(frame, [76, 88, 116], [0, 1, 0], {
+  });
+  const starOpacity = interpolate(frame, [76, 104, 132], [1, 0.6, 1], {
+    easing: Easing.inOut(Easing.cubic),
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const starScale = interpolate(frame, [76, 104, 132], [1, 0.85, 1], {
+    easing: Easing.inOut(Easing.cubic),
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const starRotation = interpolate(frame, [76, 104, 132], [0, 15, 0], {
+    easing: Easing.inOut(Easing.cubic),
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const finalPulse = interpolate(frame, [120, 132, 166], [0, 1, 0], {
     easing: Easing.out(Easing.cubic),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const ringScale = interpolate(frame, [76, 116], [0.82, 1.85], {
+  const finalRingScale = interpolate(frame, [120, 166], [0.72, 2.15], {
     easing: Easing.out(Easing.cubic),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const ringOpacity = pulse * 0.42;
-  const pulseGlowOpacity = 0.04 + pulse * 0.08;
-  const brandOpacity = interpolate(frame, [76, 96], [0, 1], {
+  const finalRingOpacity = finalPulse * 0.36;
+  const pulseGlowOpacity = 0.04 + finalPulse * 0.1;
+  const brandOpacity = interpolate(frame, [120, 140], [0, 1], {
     easing: Easing.out(Easing.cubic),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const brandY = interpolate(frame, [76, 100], [22, 0], {
+  const brandY = interpolate(frame, [120, 144], [22, 0], {
     easing: Easing.out(Easing.cubic),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
@@ -67,10 +76,10 @@ export default function FinalScene() {
           style={{ opacity: pulseGlowOpacity }}
         />
         <div
-          className="absolute size-56 rounded-full border border-primary shadow-[0_0_40px_rgba(236,72,153,0.34)]"
+          className="absolute size-56 rounded-full border border-primary shadow-[0_0_46px_rgba(236,72,153,0.38)]"
           style={{
-            opacity: ringOpacity,
-            transform: `scale(${ringScale})`,
+            opacity: finalRingOpacity,
+            transform: `scale(${finalRingScale})`,
           }}
         />
         <div className="absolute size-60 rounded-full border border-primary/15" />
@@ -78,7 +87,10 @@ export default function FinalScene() {
         <Sparkle
           static
           className="relative text-[212px] leading-none"
-          style={{ transform: `rotate(${rotation}deg)` }}
+          style={{
+            opacity: starOpacity,
+            transform: `scale(${starScale}) rotate(${spinRotation + starRotation}deg)`,
+          }}
         />
       </div>
 

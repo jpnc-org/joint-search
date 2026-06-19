@@ -1,4 +1,4 @@
-import { useCurrentFrame } from "remotion";
+import { Easing, interpolate, useCurrentFrame } from "remotion";
 import {
   Plus,
   Send,
@@ -59,6 +59,52 @@ export default function ChatScene({
     animateQueryInput && frame < querySubmitFrame ? typedQuery : "";
   const sendHighlighted =
     animateQueryInput && frame >= 128 && frame < querySubmitFrame;
+  const composerOpacity =
+    animateQueryInput && frame >= querySubmitFrame
+      ? interpolate(frame, [querySubmitFrame, querySubmitFrame + 12], [1, 0], {
+          easing: Easing.out(Easing.cubic),
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        })
+      : 1;
+  const userMessageOpacity = animateQueryInput
+    ? interpolate(
+        frame,
+        [querySubmitFrame, querySubmitFrame + 18],
+        [0, 1],
+        {
+          easing: Easing.out(Easing.cubic),
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        },
+      )
+    : 1;
+  const userMessageY = animateQueryInput
+    ? interpolate(
+        frame,
+        [querySubmitFrame, querySubmitFrame + 18],
+        [18, 0],
+        {
+          easing: Easing.out(Easing.cubic),
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        },
+      )
+    : 0;
+  const aiMessageOpacity = animateQueryInput
+    ? interpolate(frame, [aiStartFrame, aiStartFrame + 18], [0, 1], {
+        easing: Easing.out(Easing.cubic),
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 1;
+  const aiMessageY = animateQueryInput
+    ? interpolate(frame, [aiStartFrame, aiStartFrame + 18], [18, 0], {
+        easing: Easing.out(Easing.cubic),
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
 
   const capabilities = {
     code_interpreter: false,
@@ -131,7 +177,7 @@ export default function ChatScene({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="relative flex flex-1 flex-col min-w-0">
         <div className="flex items-center gap-2 border-b px-4 py-2.5">
           {(Object.keys(CAP_LABELS) as string[]).map((cap) => {
             const on = capabilities[cap as keyof typeof capabilities];
@@ -152,59 +198,73 @@ export default function ChatScene({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+          <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
             {showUserMessage && (
-              <ChatBubble role="user">{QUERY_TEXT}</ChatBubble>
+              <div
+                style={{
+                  opacity: userMessageOpacity,
+                  transform: `translateY(${userMessageY}px)`,
+                }}
+              >
+                <ChatBubble role="user">{QUERY_TEXT}</ChatBubble>
+              </div>
             )}
             {showAiMessage && (
-              <ChatBubble
-                role="ai"
-                agent="JointSearch"
-                icon={false}
-                thinking={false}
+              <div
+                style={{
+                  opacity: aiMessageOpacity,
+                  transform: `translateY(${aiMessageY}px)`,
+                }}
               >
-                {streaming && !reportText && (
-                  <span className="font-mono text-xs text-muted-foreground">
-                    thinking...
-                  </span>
-                )}
-                {reportText && (
-                  <details className="mb-2 text-xs text-muted-foreground">
-                    <summary className="flex cursor-pointer items-center gap-1 select-none hover:text-foreground transition-colors [&::-webkit-details-marker]:hidden">
-                      <ChevronRight className="size-3 transition-transform group-open:rotate-90" />
-                      Reasoning
-                    </summary>
-                    <p className="mt-1 whitespace-pre-wrap pl-4">
-                      Planner split the task into market, workflow, evidence,
-                      and risk analysis. Researchers cross-checked source gaps
-                      with Medior.
-                    </p>
-                  </details>
-                )}
-                {reportText}
-              </ChatBubble>
+                <ChatBubble
+                  role="ai"
+                  agent="JointSearch"
+                  icon={false}
+                  thinking={false}
+                >
+                  {streaming && !reportText && (
+                    <span className="font-mono text-xs text-muted-foreground">
+                      thinking...
+                    </span>
+                  )}
+                  {reportText && (
+                    <details className="mb-2 text-xs text-muted-foreground">
+                      <summary className="flex cursor-pointer items-center gap-1 select-none hover:text-foreground transition-colors [&::-webkit-details-marker]:hidden">
+                        <ChevronRight className="size-3 transition-transform group-open:rotate-90" />
+                        Reasoning
+                      </summary>
+                      <p className="mt-1 whitespace-pre-wrap pl-4">
+                        Planner split the task into market, workflow, evidence,
+                        and risk analysis. Researchers cross-checked source gaps
+                        with Medior.
+                      </p>
+                    </details>
+                  )}
+                  {reportText}
+                </ChatBubble>
+              </div>
             )}
           </div>
         </div>
 
-        <div className="px-4 pb-4">
-          <div className="mx-auto max-w-3xl">
+        <div className="px-4 pb-4" style={{ opacity: composerOpacity }}>
+          <div className="mx-auto max-w-5xl">
             <div className="relative rounded-xl border bg-card p-2">
-              <div className="flex items-end gap-2">
+              <div className="flex h-12 items-center gap-2">
                 <Textarea
                   placeholder="Message... (type @ to mention KBs, tags, files)"
                   value={inputValue}
                   className={cn(
-                    "max-h-[150px] resize-none border-0 bg-transparent shadow-none focus-visible:ring-0",
-                    inputValue ? "min-h-[52px]" : "min-h-[24px]",
+                    "h-12 min-h-12 resize-none overflow-hidden border-0 bg-transparent py-3 text-base leading-6 shadow-none focus-visible:ring-0",
+                    !inputValue && "text-sm",
                   )}
-                  rows={inputValue ? 2 : 1}
+                  rows={1}
                   readOnly
                 />
                 <Button
                   size="icon"
                   className={cn(
-                    "shrink-0 cursor-pointer",
+                    "h-12 w-12 shrink-0 cursor-pointer rounded-xl",
                     sendHighlighted && "ring-2 ring-ring",
                   )}
                 >
