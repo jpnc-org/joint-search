@@ -346,7 +346,7 @@ export default function ChatPage() {
                       <p className="mt-1 whitespace-pre-wrap pl-4">{msg.reasoning}</p>
                     </details>
                   )}
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <div className="prose prose-sm prose-invert max-w-none">
                     <Markdown>{msg.content}</Markdown>
                   </div>
                 </ChatBubble>
