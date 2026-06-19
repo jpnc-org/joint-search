@@ -16,7 +16,7 @@ from agents.research_request_completions import (
 )
 from agents.research_room import AGENTS_PROJECT_ROOT, create_research_room
 
-DEFAULT_RESEARCH_TIMEOUT_SECONDS = 900.0
+DEFAULT_RESEARCH_TIMEOUT_SECONDS = 1800.0
 
 
 class ResearchRequest(BaseModel):
