@@ -1,7 +1,10 @@
 import { Router, Response } from 'express';
+import { v4 as uuid } from 'uuid';
 import { AppDataSource } from '../utils/database';
 import { Conversation, Message } from '../entities';
 import { AuthRequest } from '../middleware/auth';
+import { env } from '../utils/env';
+import { postResearch } from '../utils/agentsClient';
 
 const router = Router();
 const convRepo = () => AppDataSource.getRepository(Conversation);
@@ -159,66 +162,62 @@ router.post('/:id/messages', async (req: AuthRequest, res: Response) => {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    // Placeholder: forward to model service
-    // For now, stream a mock reasoning + answer response
-    const reasoningText =
-      'The user is asking about ' + content.slice(0, 60) + '. Let me analyze this step by step. ' +
-      'First, I need to consider the key aspects of this question. ' +
-      'There are several factors at play here that I should examine carefully. ' +
-      'Looking at the available information, I can identify the most relevant points. ' +
-      'After careful consideration of all the evidence and context, I am ready to form a comprehensive answer.';
+    const sendSSE = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
 
-    const answerText =
-      'Based on my analysis, here is what I found:\n\n' +
-      'The topic you raised involves multiple dimensions that are worth exploring. ' +
-      'At its core, the question touches on fundamental concepts that have been widely discussed in the field. ' +
-      'The key insight is that there is no single definitive answer — rather, it depends on the specific context and constraints involved.\n\n' +
-      'Here are the main points to consider:\n\n' +
-      '**1. Context Matters** — The answer can vary significantly depending on the specific scenario and requirements. ' +
-      'What works in one situation may not be optimal in another.\n\n' +
-      '**2. Trade-offs** — There are inherent trade-offs between different approaches. ' +
-      'Balancing these competing factors is essential for reaching a well-informed conclusion.\n\n' +
-      '**3. Evidence-Based** — The best approach is to rely on empirical evidence and established principles ' +
-      'rather than assumptions. This ensures a more reliable and reproducible outcome.\n\n' +
-      'In summary, while there are several valid perspectives on this topic, ' +
-      'the most practical approach would be to start with a clear understanding of your specific goals, ' +
-      'then evaluate the available options against those criteria. ' +
-      'This structured approach will help you arrive at the best possible decision.';
+    const requestId = uuid();
 
-    const reasoningWords = reasoningText.split(' ');
-    for (let i = 0; i < reasoningWords.length; i++) {
-      const word = (i > 0 ? ' ' : '') + reasoningWords[i];
-      res.write(`event: reasoning\ndata: ${JSON.stringify({ token: word })}\n\n`);
-      await new Promise((r) => setTimeout(r, 30));
+    try {
+      sendSSE('reasoning', { token: 'Coordinating research agents…' });
+
+      const research = await postResearch(env.AGENTS_API_URL, {
+        request_id: requestId,
+        task: content,
+      });
+
+      const answerText = research.answer ?? '';
+      const reasoningText = `Researched via ${research.source ?? 'agents'} (status: ${research.status ?? 'unknown'}).`;
+
+      sendSSE('reasoning', { token: reasoningText });
+
+      const words = answerText.split(/(\s+)/);
+      for (const word of words) {
+        if (word) {
+          sendSSE('token', { token: word });
+          await new Promise((r) => setTimeout(r, 15));
+        }
+      }
+
+      const assistantMessage = msgRepo().create({
+        conversationId: conversation.id,
+        role: 'assistant',
+        reasoning: reasoningText,
+        content: answerText,
+        metadata: {
+          research: {
+            requestId: research.request_id,
+            status: research.status,
+            source: research.source,
+          },
+        },
+      });
+      await msgRepo().save(assistantMessage);
+
+      sendSSE('done', { messageId: assistantMessage.id });
+    } catch (err) {
+      console.error('Research request failed:', err);
+      const message =
+        err instanceof Error ? err.message : 'Research request failed.';
+      sendSSE('error', { error: message });
+    } finally {
+      res.end();
     }
-
-    const answerWords = answerText.split(' ');
-    for (let i = 0; i < answerWords.length; i++) {
-      const word = (i > 0 ? ' ' : '') + answerWords[i];
-      res.write(`event: token\ndata: ${JSON.stringify({ token: word })}\n\n`);
-      await new Promise((r) => setTimeout(r, 30));
-    }
-
-    const assistantMessage = msgRepo().create({
-      conversationId: conversation.id,
-      role: 'assistant',
-      reasoning: reasoningText,
-      content: answerText,
-    });
-    await msgRepo().save(assistantMessage);
-
-    res.write(
-      `event: done\ndata: ${JSON.stringify({ messageId: assistantMessage.id })}\n\n`
-    );
-    res.end();
   } catch (err) {
     console.error('Send message error:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' });
     } else {
-      res.write(
-        `event: error\ndata: ${JSON.stringify({ error: 'Internal server error' })}\n\n`
-      );
       res.end();
     }
   }

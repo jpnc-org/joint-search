@@ -26,7 +26,12 @@ export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   reasoning: string | null;
-  metadata: { ragTargets?: RagTarget[] } | null;
+  metadata:
+    | {
+        ragTargets?: RagTarget[];
+        research?: { requestId?: string; status?: string; source?: string };
+      }
+    | null;
   createdAt: string;
 }
 

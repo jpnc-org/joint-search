@@ -1,0 +1,11 @@
+.coverage
+.env
+.pytest_cache
+.ruff_cache
+.venv
+__pycache__
+*.pyc
+
+agent_config.yaml
+
+tests
