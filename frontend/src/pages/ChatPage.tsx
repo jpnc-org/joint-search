@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn } from '@/lib/utils';
 import { ChatBubble } from 'performative-ui';
 import { MentionPopover } from '@/components/MentionPopover';
+import Markdown from 'react-markdown';
 
 const CAP_LABELS: Record<keyof Capabilities, string> = {
   code_interpreter: 'Code',
@@ -345,7 +346,9 @@ export default function ChatPage() {
                       <p className="mt-1 whitespace-pre-wrap pl-4">{msg.reasoning}</p>
                     </details>
                   )}
-                  {msg.content}
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <Markdown>{msg.content}</Markdown>
+                  </div>
                 </ChatBubble>
               );
             })}
