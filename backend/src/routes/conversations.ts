@@ -164,6 +164,7 @@ router.post('/:id/messages', async (req: AuthRequest, res: Response) => {
 
     const sendSSE = (event: string, data: unknown) => {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      if (typeof (res as any).flush === 'function') (res as any).flush();
     };
 
     const requestId = uuid();

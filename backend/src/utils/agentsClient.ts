@@ -1,3 +1,5 @@
+import { Agent } from 'undici';
+
 export interface ResearchRequest {
   request_id: string;
   task: string;
@@ -9,6 +11,13 @@ export interface ResearchResponse {
   status: string;
   source: string;
 }
+
+const THIRTY_MINUTES_MS = 1_800_000;
+
+const dispatcher = new Agent({
+  headersTimeout: THIRTY_MINUTES_MS,
+  bodyTimeout: THIRTY_MINUTES_MS,
+});
 
 export async function postResearch(
   baseUrl: string,
@@ -22,7 +31,8 @@ export async function postResearch(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
-  });
+    dispatcher,
+  } as RequestInit);
 
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
