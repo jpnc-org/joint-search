@@ -22,7 +22,7 @@ export default function SynthesisScene() {
   ];
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center bg-background">
+    <div className="relative flex h-screen w-full items-center justify-center bg-background">
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
@@ -30,7 +30,7 @@ export default function SynthesisScene() {
         hoverDistance={0}
       />
 
-      <div className="relative z-10 flex flex-col items-center gap-6">
+      <div className="relative z-10 flex flex-col items-center justify-center gap-6">
         <div className="flex items-center gap-6">
           {showMedior && (
             <Card className="w-56 p-4">

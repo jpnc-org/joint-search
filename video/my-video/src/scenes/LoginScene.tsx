@@ -24,15 +24,15 @@ export default function LoginScene() {
   const loading = frame > 118;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-background p-4">
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={40}
         baseOpacity={0.3}
         hoverDistance={0}
       />
-      <div className="relative z-10 w-full max-w-sm">
-        <Card className="border-border/60 bg-card/80 backdrop-blur-xl">
+      <div className="relative z-10 flex w-full items-center justify-center">
+        <Card className="w-[440px] border-border/60 bg-card/80 backdrop-blur-xl">
           <CardHeader className="text-center">
             <div className="mb-2 flex items-center justify-center gap-1.5">
               <Sparkle />{" "}

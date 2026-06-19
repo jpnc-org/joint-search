@@ -9,7 +9,7 @@ export default function ProblemScene() {
   const showRight = frame > 100;
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center bg-background">
+    <div className="relative flex h-screen w-full items-center justify-center bg-background">
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={40}
@@ -17,7 +17,7 @@ export default function ProblemScene() {
         hoverDistance={0}
       />
 
-      <div className="relative z-10 grid w-full max-w-5xl grid-cols-2 gap-8 px-8">
+      <div className="relative z-10 grid w-full max-w-5xl grid-cols-2 items-center justify-center gap-8 px-8">
         {showLeft && (
           <Card className="border-destructive/50 bg-destructive/5 p-8">
             <CardHeader className="mb-6">

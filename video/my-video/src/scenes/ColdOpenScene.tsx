@@ -12,7 +12,7 @@ export default function ColdOpenScene() {
   const showSearch = frame > 150;
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center bg-background">
+    <div className="relative flex h-screen w-full items-center justify-center bg-background">
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
@@ -20,7 +20,7 @@ export default function ColdOpenScene() {
         hoverDistance={0}
       />
 
-      <div className="relative z-10 flex flex-col items-center gap-8">
+      <div className="relative z-10 flex flex-col items-center justify-center gap-8">
         {showPdf && (
           <Card className="flex items-center gap-4 p-6">
             <FileText className="size-12 text-primary" />

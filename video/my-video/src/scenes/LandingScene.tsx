@@ -13,7 +13,7 @@ import {
 
 export default function LandingScene() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background">
+    <div className="relative h-screen w-full overflow-y-auto overflow-x-hidden bg-background">
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
@@ -27,22 +27,24 @@ export default function LandingScene() {
         durationS={[12, 24]}
       />
 
-      <div className="relative z-10">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-2 text-lg font-semibold">
-            <Sparkle /> DeepResearch
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="cursor-pointer">
-              Sign in
-            </Button>
-            <Button size="sm" className="cursor-pointer">
-              Get started
-            </Button>
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <nav className="sticky top-0 z-20 flex w-full items-center justify-between border-b border-border/40 bg-background/80 px-6 py-5 backdrop-blur-md">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              <Sparkle /> DeepResearch
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="cursor-pointer">
+                Sign in
+              </Button>
+              <Button size="sm" className="cursor-pointer">
+                Get started
+              </Button>
+            </div>
           </div>
         </nav>
 
-        <section className="mx-auto flex max-w-5xl flex-col items-center px-6 pt-40 pb-32 text-center">
+        <section className="flex w-full flex-1 flex-col items-center justify-center px-6 pt-20 pb-16 text-center">
           <h1 className="flex flex-wrap items-baseline justify-center gap-x-3 pb-4 leading-[1.5] text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             <span>Stop guessing.</span>
             <span>Start</span>
@@ -59,7 +61,7 @@ export default function LandingScene() {
           </p>
         </section>
 
-        <section className="py-16">
+        <section className="w-full py-16">
           <SlippyWords
             className="w-full"
             intensity={100}
@@ -92,7 +94,7 @@ export default function LandingScene() {
           />
         </section>
 
-        <section className="mx-auto max-w-4xl px-6 py-32">
+        <section className="w-full px-6 py-32">
           <div className="mb-10 text-center">
             <EyebrowPill icon={false} className="mb-4">
               The difference
@@ -102,27 +104,29 @@ export default function LandingScene() {
             </h2>
           </div>
 
-          <BeforeAfter
-            beforeLabel="Without DeepResearch"
-            afterLabel="With DeepResearch"
-            brand="DeepResearch"
-            before={[
-              "LLM might hallucinate facts",
-              "No citations or source links",
-              "Information may be outdated",
-              "No way to verify claims",
-            ]}
-            after={[
-              "Every claim cross-checked against your documents",
-              "Inline citations you can click through",
-              "Live web search fills knowledge gaps",
-              "Fact-check verdicts on every statement",
-            ]}
-          />
+          <div className="mx-auto w-full max-w-5xl">
+            <BeforeAfter
+              beforeLabel="Without DeepResearch"
+              afterLabel="With DeepResearch"
+              brand="DeepResearch"
+              before={[
+                "LLM might hallucinate facts",
+                "No citations or source links",
+                "Information may be outdated",
+                "No way to verify claims",
+              ]}
+              after={[
+                "Every claim cross-checked against your documents",
+                "Inline citations you can click through",
+                "Live web search fills knowledge gaps",
+                "Fact-check verdicts on every statement",
+              ]}
+            />
+          </div>
         </section>
 
-        <section className="mx-auto max-w-5xl px-6 py-32">
-          <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2">
+        <section className="w-full px-6 py-32">
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-8 md:grid-cols-2">
             <div>
               <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight">
                 <Layers className="size-7 text-primary" /> Knowledge Base
@@ -161,8 +165,8 @@ export default function LandingScene() {
           </div>
         </section>
 
-        <footer className="border-t border-border">
-          <div className="mx-auto flex max-w-6xl items-center px-6 py-6 text-xs text-muted-foreground">
+        <footer className="w-full border-t border-border">
+          <div className="mx-auto flex w-full max-w-6xl items-center px-6 py-6 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Sparkle solid /> DeepResearch
             </div>

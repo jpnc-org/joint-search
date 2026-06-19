@@ -51,7 +51,7 @@ export default function ChatScene() {
   ];
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen w-full bg-background">
       <div className="flex w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border">
         <div className="p-3 space-y-2">
           <Button

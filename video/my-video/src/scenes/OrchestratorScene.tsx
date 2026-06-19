@@ -11,7 +11,7 @@ export default function OrchestratorScene() {
   const showOrchestrator = frame > 100;
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center bg-background">
+    <div className="relative flex h-screen w-full items-center justify-center bg-background">
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
@@ -19,7 +19,7 @@ export default function OrchestratorScene() {
         hoverDistance={0}
       />
 
-      <div className="relative z-10 flex items-center gap-8">
+      <div className="relative z-10 flex items-center justify-center gap-8">
         {showFrontend && (
           <Card className="w-64 p-6">
             <CardHeader>
