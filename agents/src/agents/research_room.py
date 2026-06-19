@@ -179,7 +179,6 @@ def build_research_room_kickoff_message(
     medior_name: str = DEFAULT_MEDIOR_NAME,
 ) -> str:
     """Build the kickoff message that mentions only the orchestrator."""
-
     return cleandoc(
         f"""
         @{orchestrator_name} please coordinate this research task.
@@ -187,16 +186,28 @@ def build_research_room_kickoff_message(
         Original task:
         {task}
 
-        Workflow:
-        1. Ask {planner_name} to decompose the task and assign researcher work.
-        2. Have {planner_name} use {medior_name} for a focused researcher
-        debate before draft synthesis.
-        3. Review the synthesized draft for quality.
-        4. If needed, send one second-pass request to {planner_name} with
-        additional instructions.
-        5. Publish the final answer as a room-wide task event without mentions.
+        Pass this task to {planner_name} for decomposition. Expect the answer
+        from {medior_name}
         """
     )
+
+    # return cleandoc(
+    #     f"""
+    #     @{orchestrator_name} please coordinate this research task.
+
+    #     Original task:
+    #     {task}
+
+    #     Workflow:
+    #     1. Ask {planner_name} to decompose the task and assign researcher work.
+    #     2. Have {planner_name} use {medior_name} for a focused researcher
+    #     debate before draft synthesis.
+    #     3. Review the synthesized draft for quality.
+    #     4. If needed, send one second-pass request to {planner_name} with
+    #     additional instructions.
+    #     5. Publish the final answer as a room-wide task event without mentions.
+    #     """
+    # )
 
 
 async def setup_research_room(

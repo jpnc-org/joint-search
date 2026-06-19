@@ -27,7 +27,7 @@ from langchain_core.tools import tool as _langchain_tool
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 
-DEFAULT_LANGGRAPH_MODEL = "deepseek/deepseek-v4-flash"
+DEFAULT_LANGGRAPH_MODEL = "alibaba/qwen3.7-plus"
 _AGENT_TOOL_MARKER = "_agent_tool"
 BAND_TOOL_CALL_INSTRUCTIONS = cleandoc(
     """
