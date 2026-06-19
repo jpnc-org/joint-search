@@ -96,10 +96,10 @@ export default function CrossCheckScene() {
           }}
         >
           <Badge variant="outline" className="mb-4 px-4 py-2">
-            JointSearch research room
+            Band.ai research room
           </Badge>
           <h2 className="text-4xl font-semibold tracking-tight">
-            Researchers cross-check findings in JointSearch under Medior supervision
+            Researchers cross-check findings in Band.ai under Medior supervision
           </h2>
         </div>
 
@@ -114,7 +114,7 @@ export default function CrossCheckScene() {
             <div className="mb-5 flex items-center gap-3">
               <MessageSquare className="size-6 text-primary" />
               <div>
-                <div className="font-semibold">JointSearch research room</div>
+                <div className="font-semibold">Band.ai research room</div>
                 <div className="text-sm text-muted-foreground">
                   Multi-agent collaboration
                 </div>
