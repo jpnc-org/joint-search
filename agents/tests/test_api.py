@@ -73,7 +73,7 @@ def test_research_endpoint_creates_room_and_returns_completion(
         "band_agent_api_key": "agent-api-key",
         "band_rest_url": "https://band.example.test/api/v1",
         "agent_config_path": ".",
-        "task_id": "request-id",
+        "backend_request_id": "request-id",
     }
     assert calls["wait"] == {
         "request_id": "request-id",

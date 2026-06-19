@@ -80,6 +80,7 @@ def test_create_research_room_loads_config_resolves_handle_and_sets_up_room(
             band_rest_url="https://band.example.test",
             agent_config_path="config.yaml",
             task_id="task-id",
+            backend_request_id="backend-req-id",
             orchestrator_name="research_orchestrator",
             planner_name="research_planner",
         )
@@ -98,6 +99,7 @@ def test_create_research_room_loads_config_resolves_handle_and_sets_up_room(
         assert calls["agent_config_path"] == "config.yaml"
         assert calls["setup_kwargs"]["task"] == "Research task"
         assert calls["setup_kwargs"]["task_id"] == "task-id"
+        assert calls["setup_kwargs"]["backend_request_id"] == "backend-req-id"
         assert calls["setup_kwargs"]["orchestrator_name"] == "research_orchestrator"
         assert calls["setup_kwargs"]["orchestrator_handle"] == (
             "owner/research-orchestrator"

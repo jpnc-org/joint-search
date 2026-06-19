@@ -169,6 +169,7 @@ def test_setup_research_room_creates_room_adds_agents_and_sends_kickoff() -> Non
             agent_definitions=build_agent_definitions(),
             agent_specs=build_agent_specs(),
             task_id="task-id",
+            backend_request_id="task-id",
             orchestrator_handle="owner/research-orchestrator",
         )
 

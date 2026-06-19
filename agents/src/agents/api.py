@@ -99,7 +99,7 @@ async def run_research_request(request: ResearchRequest) -> ResearchResponse:
             band_agent_api_key=band_agent_api_key,
             band_rest_url=band_rest_url,
             agent_config_path=agent_config_path,
-            task_id=request_id,
+            backend_request_id=request_id,
         )
         completion = await wait_for_research_request_completion(
             request_id,
