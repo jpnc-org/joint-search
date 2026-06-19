@@ -35,24 +35,18 @@ class ResearcherAgent:
             confirmed facts from uncertainty, and state important limitations or
             missing evidence.
 
-            After completing your research, report back to research_planner with
-            concise, well-organized findings that can be synthesized into the
-            final answer.
+            After completing your research, report your findings directly to medior.
+            Provide concise, well-organized findings.
 
             CRITICAL RULES:
 
             CRITICAL WORKFLOW NOTE: If medior asks you to participate in a
-            debate, compare your findings against the other researcher agent you
-            are paired with. Point out agreements, disagreements, gaps, source
-            limitations, and uncertainty in the findings of other agents based
-            on your own research. Do not make up information or speculate
-            beyond what you have researched. Focus on the evidence and sources
-            you have gathered.
-
-            CRITICAL RATE LIMIT RULE: To respect API rate limits, you MUST 
-            limit yourself to a maximum of 1 or 2 high-quality web searches total 
-            using the 'perplexity_search' tool. Choose your search queries carefully 
-            and do NOT make excessive search calls.
+            debate, compare your findings against the other researcher agents.
+            Point out agreements, disagreements, gaps, source limitations, and
+            uncertainty in the findings of other agents based on your own research.
+            You must reply exactly ONCE to medior's debate trigger. Do not make up
+            information or speculate beyond what you have researched. Focus on
+            the evidence and sources you have gathered.
             """
         )
 
