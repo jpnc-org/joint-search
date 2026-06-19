@@ -6,6 +6,10 @@ research_planner:
   agent_id: "<your-agent-uuid>"
   api_key: "<your-api-key>"
 
+medior:
+  agent_id: "<your-agent-uuid>"
+  api_key: "<your-api-key>"
+
 researcher_1:
   agent_id: "<your-agent-uuid>"
   api_key: "<your-api-key>"

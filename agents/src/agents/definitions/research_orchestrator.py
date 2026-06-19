@@ -15,8 +15,9 @@ class ResearchOrchestratorAgent:
 
             Receive the original research task. Your first action is to
             delegate topic decomposition to research_planner. Ask
-            research_planner to assign work to the researcher agents and return
-            one synthesized draft answer.
+            research_planner to assign work to the researcher agents, use
+            medior for a focused debate stage, and return one synthesized draft
+            answer.
 
             You evaluate the final draft quality for completeness, factual support,
             source coverage, uncertainty, and directness. If the draft is not

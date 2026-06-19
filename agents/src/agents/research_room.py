@@ -27,6 +27,7 @@ from agents.band.registry import (
 
 DEFAULT_ORCHESTRATOR_NAME = "research_orchestrator"
 DEFAULT_PLANNER_NAME = "research_planner"
+DEFAULT_MEDIOR_NAME = "medior"
 PARTICIPANT_ROLE = "member"
 AGENTS_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -57,6 +58,7 @@ async def create_research_room(
     task_id: str | None = None,
     orchestrator_name: str = DEFAULT_ORCHESTRATOR_NAME,
     planner_name: str = DEFAULT_PLANNER_NAME,
+    medior_name: str = DEFAULT_MEDIOR_NAME,
 ) -> ResearchRoomResult:
     """Create a research room using env/config inputs and a live Band client.
 
@@ -84,6 +86,7 @@ async def create_research_room(
         orchestrator_name=orchestrator_name,
         orchestrator_handle=orchestrator_profile.handle,
         planner_name=planner_name,
+        medior_name=medior_name,
     )
 
 
@@ -143,16 +146,17 @@ def select_research_room_participant_names(
     agent_specs: Sequence[AgentSpec],
     orchestrator_name: str = DEFAULT_ORCHESTRATOR_NAME,
     planner_name: str = DEFAULT_PLANNER_NAME,
+    medior_name: str = DEFAULT_MEDIOR_NAME,
 ) -> tuple[str, ...]:
-    """Select the orchestrator, planner, and all researcher agent names.
+    """Select the orchestrator, planner, medior, and all researcher names.
 
     Raises:
-        ValueError: If the orchestrator, planner, or any researcher agent is not
-            registered.
+        ValueError: If the orchestrator, planner, medior, or any researcher
+            agent is not registered.
     """
 
     specs_by_name = {spec.name: spec for spec in agent_specs}
-    for required_name in (orchestrator_name, planner_name):
+    for required_name in (orchestrator_name, planner_name, medior_name):
         if required_name not in specs_by_name:
             raise ValueError(f"Agent '{required_name}' is not registered.")
 
@@ -162,7 +166,9 @@ def select_research_room_participant_names(
     if not researcher_names:
         raise ValueError("At least one researcher agent must be registered.")
 
-    return _dedupe_names((orchestrator_name, planner_name, *researcher_names))
+    return _dedupe_names(
+        (orchestrator_name, planner_name, medior_name, *researcher_names)
+    )
 
 
 def build_research_room_kickoff_message(
@@ -170,6 +176,7 @@ def build_research_room_kickoff_message(
     task: str,
     orchestrator_name: str = DEFAULT_ORCHESTRATOR_NAME,
     planner_name: str = DEFAULT_PLANNER_NAME,
+    medior_name: str = DEFAULT_MEDIOR_NAME,
 ) -> str:
     """Build the kickoff message that mentions only the orchestrator."""
 
@@ -182,10 +189,12 @@ def build_research_room_kickoff_message(
 
         Workflow:
         1. Ask {planner_name} to decompose the task and assign researcher work.
-        2. Review the synthesized draft for quality.
-        3. If needed, send one second-pass request to {planner_name} with
+        2. Have {planner_name} use {medior_name} for a focused researcher
+        debate before draft synthesis.
+        3. Review the synthesized draft for quality.
+        4. If needed, send one second-pass request to {planner_name} with
         additional instructions.
-        4. Publish the final answer as a room-wide task event without mentions.
+        5. Publish the final answer as a room-wide task event without mentions.
         """
     )
 
@@ -200,6 +209,7 @@ async def setup_research_room(
     orchestrator_name: str = DEFAULT_ORCHESTRATOR_NAME,
     orchestrator_handle: str | None = None,
     planner_name: str = DEFAULT_PLANNER_NAME,
+    medior_name: str = DEFAULT_MEDIOR_NAME,
 ) -> ResearchRoomResult:
     """Create the Band room, add participants, and send the kickoff message.
 
@@ -219,6 +229,7 @@ async def setup_research_room(
         agent_specs=resolved_agent_specs,
         orchestrator_name=orchestrator_name,
         planner_name=planner_name,
+        medior_name=medior_name,
     )
 
     for participant_name in participant_names:
@@ -247,6 +258,7 @@ async def setup_research_room(
             task=normalized_task,
             orchestrator_name=orchestrator_name,
             planner_name=planner_name,
+            medior_name=medior_name,
         ),
         mentions=[
             BandMention(
