@@ -1,3 +1,7 @@
+research_orchestrator:
+  agent_id: "<your-agent-uuid>"
+  api_key: "<your-api-key>"
+
 research_planner:
   agent_id: "<your-agent-uuid>"
   api_key: "<your-api-key>"

@@ -174,6 +174,7 @@ def test_all_top_level_agent_modules_register_default_specs(
 
     for module_name in (
         "agents.definitions",
+        "agents.definitions.research_orchestrator",
         "agents.definitions.research_planner",
         "agents.definitions.researcher",
         "agents.definitions.test_tool_agent",
@@ -185,29 +186,84 @@ def test_all_top_level_agent_modules_register_default_specs(
     specs = registry_module.iter_agent_specs()
 
     assert [spec.name for spec in specs] == [
+        "research_orchestrator",
         "research_planner",
         "researcher_1",
         "researcher_2",
         "researcher_3",
-        "test_tool_agent",
     ]
     assert specs[0].agent_type is AgentType.ORCHESTRATOR
+    assert "evaluate the final draft quality" in specs[0].instructions
+    assert "one second-pass revision" in specs[0].instructions
+    assert "room-wide task event" in specs[0].instructions
+    assert specs[1].agent_type is AgentType.ORCHESTRATOR
     assert "Break the user's question into researchable subtopics" in (
-        specs[0].instructions
+        specs[1].instructions
     )
-    assert "do not research the subtopics yourself" in specs[0].instructions
-    for spec in specs[1:4]:
+    assert "assign subtopics to the researcher agents" in specs[1].instructions
+    assert "synthesize a draft answer" in specs[1].instructions
+    assert "research_orchestrator" in specs[1].instructions
+    assert "do not research the subtopics yourself" in (specs[1].instructions)
+    for spec in specs[2:5]:
         assert spec.agent_type is AgentType.RESEARCHER
-        assert "research the subtopics assigned to you" in spec.instructions
-    assert specs[4].agent_type is AgentType.GENERAL_PURPOSE
-    assert specs[4].tools[0].name == "echo"
-    assert "Args:" in specs[4].tools[0].description
-    assert "message:" in specs[4].tools[0].description
-    for spec in specs[:4]:
+        assert "research the subtopic assigned to you" in spec.instructions
+        assert "sources" in spec.instructions
+        assert "limitations" in spec.instructions
+        assert "research_planner" in spec.instructions
+    for spec in specs[:5]:
         assert "\n\n" in spec.instructions
         assert not spec.instructions.startswith(" ")
         assert "band_send_message" not in spec.instructions
         assert "tool call" not in spec.instructions
+
+
+def test_research_planner_keeps_decomposition_role(monkeypatch: MonkeyPatch) -> None:
+    clear_agent_specs(monkeypatch)
+
+    for module_name in (
+        "agents.definitions",
+        "agents.definitions.research_orchestrator",
+        "agents.definitions.research_planner",
+        "agents.definitions.researcher",
+        "agents.definitions.test_tool_agent",
+    ):
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
+
+    importlib.import_module("agents.definitions")
+
+    specs = registry_module.iter_agent_specs()
+    planner = next(spec for spec in specs if spec.name == "research_planner")
+
+    assert "topic decomposition" in planner.instructions
+    assert "assign subtopics to the researcher agents" in planner.instructions
+    assert "synthesize a draft answer" in planner.instructions
+    assert "research_orchestrator" in planner.instructions
+
+
+def test_research_orchestrator_quality_control_role(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    clear_agent_specs(monkeypatch)
+
+    for module_name in (
+        "agents.definitions",
+        "agents.definitions.research_orchestrator",
+        "agents.definitions.research_planner",
+        "agents.definitions.researcher",
+        "agents.definitions.test_tool_agent",
+    ):
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
+
+    importlib.import_module("agents.definitions")
+
+    specs = registry_module.iter_agent_specs()
+    orchestrator = next(spec for spec in specs if spec.name == "research_orchestrator")
+
+    assert orchestrator.agent_type is AgentType.ORCHESTRATOR
+    assert "delegate topic decomposition to research_planner" in (specs[0].instructions)
+    assert "evaluate the final draft quality" in orchestrator.instructions
+    assert "one second-pass revision" in orchestrator.instructions
+    assert "room-wide task event" in orchestrator.instructions
 
 
 def test_agent_tool_decorator_creates_tool(monkeypatch: MonkeyPatch) -> None:

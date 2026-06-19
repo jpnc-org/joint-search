@@ -31,16 +31,20 @@ DEFAULT_LANGGRAPH_MODEL = "deepseek/deepseek-v4-flash"
 _AGENT_TOOL_MARKER = "_agent_tool"
 BAND_TOOL_CALL_INSTRUCTIONS = cleandoc(
     """
-    Every answer to a Band message must be delivered by a tool call named
-    band_send_message. Do not answer as a normal assistant message. Do not
-    answer with a plain final text response because those are not visible in the
-    Band chat.
+    Every visible Band response must be delivered by a Band tool call. Do not
+    answer as a normal assistant message. Do not answer with a plain final text
+    response because plain final text responses are not visible in the Band
+    chat.
 
-    In the tool call, set content to your full answer and set mentions to at
-    least one relevant participant, usually the sender you are replying to.
+    Use band_send_message when addressing specific participants. In that tool
+    call, set content to your full answer and set mentions to at least one
+    relevant participant, usually the sender you are replying to.
+
+    Use band_send_event with message_type set to task for room-wide progress or
+    a final answer that should not mention anyone.
 
     If you need to think or use other tools first, still finish by calling
-    band_send_message.
+    either band_send_message or band_send_event so the result reaches the chat.
     """
 )
 AGENT_RECONNECT_BASE_DELAY_SECONDS = 2.0
@@ -344,6 +348,56 @@ class AgentEntry:
     agent_type: AgentType = AgentType.GENERAL_PURPOSE
 
 
+def load_agent_definitions(
+    agent_definitions_file_path: str | Path = ".",
+) -> dict[str, AgentDefinition]:
+    """Load configured Band agents from a YAML file or containing directory.
+
+    Args:
+        agent_definitions_file_path: Path to an ``agent_config.yaml`` file, or a
+            directory containing that file. Defaults to the current working
+            directory, then falls back to this ``agents`` project directory.
+
+    Returns:
+        Mapping from local agent name to normalized agent definition.
+
+    Raises:
+        ValueError: If the YAML file is not a mapping, an agent name is not a
+            string, or an agent entry is not a mapping.
+    """
+
+    agent_definitions_path = _resolve_agent_definitions_path(
+        agent_definitions_file_path
+    )
+
+    with agent_definitions_path.open(encoding="utf-8") as file:
+        raw_config = yaml.safe_load(file) or {}
+
+    if not isinstance(raw_config, dict):
+        raise ValueError("Agent definitions file must contain a YAML mapping.")
+
+    loaded_agents: dict[str, AgentDefinition] = {}
+
+    for raw_name, raw_definition in raw_config.items():
+        if not isinstance(raw_name, str):
+            raise ValueError("Agent definition names must be strings.")
+        if not isinstance(raw_definition, dict):
+            raise ValueError(f"Agent '{raw_name}' must be a YAML mapping.")
+
+        agent_id, api_key = load_agent_config(
+            raw_name,
+            config_path=agent_definitions_path,
+        )
+
+        loaded_agents[raw_name] = AgentDefinition(
+            name=raw_name,
+            band_agent_id=agent_id,
+            band_api_key=api_key,
+        )
+
+    return loaded_agents
+
+
 class Registry:
     """Load Band agent definitions and start their local runtime tasks."""
 
@@ -409,34 +463,7 @@ class Registry:
                 a string, or an agent entry is not a mapping.
         """
 
-        agent_definitions_path = _resolve_agent_definitions_path(
-            agent_definitions_file_path
-        )
-
-        with agent_definitions_path.open(encoding="utf-8") as file:
-            raw_config = yaml.safe_load(file) or {}
-
-        if not isinstance(raw_config, dict):
-            raise ValueError("Agent definitions file must contain a YAML mapping.")
-
-        loaded_agents: dict[str, AgentDefinition] = {}
-
-        for raw_name, raw_definition in raw_config.items():
-            if not isinstance(raw_name, str):
-                raise ValueError("Agent definition names must be strings.")
-            if not isinstance(raw_definition, dict):
-                raise ValueError(f"Agent '{raw_name}' must be a YAML mapping.")
-
-            agent_id, api_key = load_agent_config(
-                raw_name,
-                config_path=agent_definitions_path,
-            )
-
-            loaded_agents[raw_name] = AgentDefinition(
-                name=raw_name,
-                band_agent_id=agent_id,
-                band_api_key=api_key,
-            )
+        loaded_agents = load_agent_definitions(agent_definitions_file_path)
 
         self._agent_registry = {
             name: AgentEntry(agent_definition=definition)

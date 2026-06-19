@@ -634,6 +634,13 @@ def test_send_message_rejects_invalid_input() -> None:
                 mentions=[BandMention(id=" ")],
             )
 
+        with pytest.raises(ValueError, match="handles"):
+            await client.send_message(
+                room_id="room-id",
+                content="@Agent B hello",
+                mentions=[BandMention(id="agent-b-id")],
+            )
+
     asyncio.run(scenario())
 
 
@@ -744,7 +751,7 @@ def test_send_message_raises_project_error_for_sdk_failure() -> None:
             await client.send_message(
                 room_id="room-id",
                 content="@Agent B hello",
-                mentions=[BandMention(id="agent-b-id")],
+                mentions=[BandMention(id="agent-b-id", handle="owner/agent-b")],
             )
 
         assert isinstance(exc_info.value.__cause__, RuntimeError)

@@ -412,13 +412,14 @@ class BandClient:
             room_id: Band room ID to send the message to.
             content: Text message content.
             mentions: Mentioned room participants used by Band for delivery.
+                Band requires each mention to include a non-empty handle.
 
         Returns:
             Normalized message send response from Band.
 
         Raises:
             ValueError: If ``room_id`` or ``content`` is empty, ``mentions`` is
-                empty, or any mention ID is empty.
+                empty, or any mention ID or handle is empty.
             BandClientError: If Band rejects or fails the message request.
         """
 
@@ -442,6 +443,8 @@ class BandClient:
             not mention.id for mention in normalized_mentions
         ):
             raise ValueError("mentions must not contain empty mention IDs.")
+        if any(not mention.handle for mention in normalized_mentions):
+            raise ValueError("mentions must not contain empty mention handles.")
 
         try:
             response = (
