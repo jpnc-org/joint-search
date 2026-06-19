@@ -34,4 +34,5 @@ export const env = {
   EMBEDDING_BASE_URL: required('EMBEDDING_BASE_URL'),
   EMBEDDING_MODEL: required('EMBEDDING_MODEL'),
   EMBEDDING_DIMS: parseInt(required('EMBEDDING_DIMS'), 10),
+  AGENTS_API_URL: required('AGENTS_API_URL'),
 };

@@ -37,7 +37,9 @@ export class Message {
   reasoning!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  metadata!: { ragTargets?: RagTarget[] } | null;
+  metadata!:
+    | { ragTargets?: RagTarget[]; research?: { requestId?: string; status?: string; source?: string } }
+    | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
