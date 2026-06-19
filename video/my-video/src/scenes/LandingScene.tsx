@@ -36,7 +36,7 @@ export default function LandingScene() {
       <nav className="absolute top-0 z-20 flex w-full items-center justify-between border-b border-border/40 bg-background/80 px-6 py-5 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
           <div className="flex items-center gap-2 text-lg font-semibold">
-            <Sparkle /> DeepResearch
+            <Sparkle /> JointSearch
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="cursor-pointer">
@@ -115,9 +115,9 @@ export default function LandingScene() {
 
           <div className="mx-auto w-full max-w-5xl">
             <BeforeAfter
-              beforeLabel="Without DeepResearch"
-              afterLabel="With DeepResearch"
-              brand="DeepResearch"
+              beforeLabel="Without JointSearch"
+              afterLabel="With JointSearch"
+              brand="JointSearch"
               before={[
                 "LLM might hallucinate facts",
                 "No citations or source links",
@@ -177,7 +177,7 @@ export default function LandingScene() {
         <footer className="w-full border-t border-border">
           <div className="mx-auto flex w-full max-w-6xl items-center px-6 py-6 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <Sparkle solid /> DeepResearch
+              <Sparkle solid /> JointSearch
             </div>
           </div>
         </footer>

@@ -40,7 +40,7 @@ export default function LoginScene() {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const email = typeText("team@deepresearch.dev", frame, 42, 1.9);
+  const email = typeText("team@jointsearch.ai", frame, 42, 1.9);
   const password = typeText("************", frame, 82, 1.5);
   const loading = frame > 118;
 
@@ -69,7 +69,7 @@ export default function LoginScene() {
           <CardHeader className="text-center">
             <div className="mb-2 flex items-center justify-center gap-1.5">
               <Sparkle />{" "}
-              <CardTitle className="text-xl">DeepResearch</CardTitle>
+              <CardTitle className="text-xl">JointSearch</CardTitle>
             </div>
             <CardDescription>Sign in to your account</CardDescription>
           </CardHeader>

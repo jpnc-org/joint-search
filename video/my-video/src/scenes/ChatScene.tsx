@@ -22,7 +22,7 @@ const CAP_LABELS: Record<string, string> = {
 };
 
 const QUERY_TEXT =
-  "Research the best positioning for our multi-agent deep research platform. Use the uploaded pitch notes and market documents.";
+  "Research the best positioning for JointSearch. Use the uploaded pitch notes and market documents.";
 
 const REPORT_TEXT =
   "Here is the verified synthesis: the opportunity is strongest when the product is positioned as a managed research workflow, not just a chatbot. Evidence coverage is strong across uploaded docs and recent web findings. Main risk: source quality varies, so disputed claims are marked for review.";
@@ -159,7 +159,7 @@ export default function ChatScene({
             {showAiMessage && (
               <ChatBubble
                 role="ai"
-                agent="DeepResearch"
+                agent="JointSearch"
                 thinking={streaming && !reportText ? "thinking..." : false}
               >
                 {reportText && (
