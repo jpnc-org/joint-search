@@ -34,26 +34,25 @@ const typeText = (text: string, frame: number, start: number, speed = 2.4) => {
 
 type ChatSceneProps = {
   animateQueryInput?: boolean;
+  showAnswer?: boolean;
 };
 
 export default function ChatScene({
   animateQueryInput = false,
+  showAnswer = true,
 }: ChatSceneProps) {
   const frame = useCurrentFrame();
   const querySubmitFrame = animateQueryInput ? 155 : 0;
   const aiStartFrame = animateQueryInput ? 185 : 0;
-  const reportStartFrame = animateQueryInput ? 220 : 92;
-  const reportSpeed = animateQueryInput ? 0.65 : 1.15;
+  const reportStartFrame = animateQueryInput ? 220 : 55;
+  const reportSpeed = animateQueryInput ? 0.65 : 0.48;
   const typedQuery = animateQueryInput
     ? typeText(QUERY_TEXT, frame, 18, 0.85)
     : "";
-  const reportText = typeText(
-    REPORT_TEXT,
-    frame,
-    reportStartFrame,
-    reportSpeed,
-  );
-  const streaming = frame < reportStartFrame;
+  const reportText = showAnswer
+    ? typeText(REPORT_TEXT, frame, reportStartFrame, reportSpeed)
+    : "";
+  const streaming = !showAnswer || frame < reportStartFrame;
   const showUserMessage = !animateQueryInput || frame >= querySubmitFrame;
   const showAiMessage = !animateQueryInput || frame >= aiStartFrame;
   const inputValue =

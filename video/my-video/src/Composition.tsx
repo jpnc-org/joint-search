@@ -20,14 +20,14 @@ const LANDING_DURATION = 270;
 const LOGIN_START = 720;
 const LOGIN_DURATION = 150;
 const POST_LOGIN_CHAT_START = 870;
-const POST_LOGIN_CHAT_DURATION = 480;
-const ARCHITECTURE_START = 1350;
+const POST_LOGIN_CHAT_DURATION = 240;
+const ARCHITECTURE_START = 1110;
 const ARCHITECTURE_DURATION = 570;
-const CROSSCHECK_START = 1920;
+const CROSSCHECK_START = 1680;
 const CROSSCHECK_DURATION = 360;
-const SYNTHESIS_START = 2280;
+const SYNTHESIS_START = 2040;
 const SYNTHESIS_DURATION = 330;
-const CHAT_START = 2610;
+const CHAT_START = 2370;
 const CHAT_DURATION = 210;
 const SCENE_TRANSITION_DURATION = 24;
 
@@ -126,7 +126,7 @@ export const MyComposition = () => {
         durationInFrames={POST_LOGIN_CHAT_DURATION}
         zIndex={4}
       >
-        <ChatScene animateQueryInput />
+        <ChatScene animateQueryInput showAnswer={false} />
       </SceneSequence>
       <SceneSequence
         from={ARCHITECTURE_START}
