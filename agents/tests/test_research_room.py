@@ -23,6 +23,11 @@ def build_agent_definitions() -> dict[str, AgentDefinition]:
             band_agent_id="planner-id",
             band_api_key="planner-key",
         ),
+        "medior": AgentDefinition(
+            name="medior",
+            band_agent_id="medior-id",
+            band_api_key="medior-key",
+        ),
         "researcher_1": AgentDefinition(
             name="researcher_1",
             band_agent_id="researcher-1-id",
@@ -47,6 +52,11 @@ def build_agent_specs() -> tuple[AgentSpec, ...]:
             name="research_planner",
             agent_type=AgentType.ORCHESTRATOR,
             instructions="planner instructions",
+        ),
+        AgentSpec(
+            name="medior",
+            agent_type=AgentType.ORCHESTRATOR,
+            instructions="medior instructions",
         ),
         AgentSpec(
             name="researcher_1",
@@ -166,6 +176,7 @@ def test_setup_research_room_creates_room_adds_agents_and_sends_kickoff() -> Non
         assert result.participant_names == (
             "research_orchestrator",
             "research_planner",
+            "medior",
             "researcher_1",
             "researcher_2",
         )
@@ -193,21 +204,28 @@ def test_setup_research_room_creates_room_adds_agents_and_sends_kickoff() -> Non
             {
                 "method": "add_agent_chat_participant",
                 "chat_id": "room-id",
-                "participant_id": "researcher-1-id",
+                "participant_id": "medior-id",
                 "role": "member",
                 "request_options": calls[3]["request_options"],
             },
             {
                 "method": "add_agent_chat_participant",
                 "chat_id": "room-id",
-                "participant_id": "researcher-2-id",
+                "participant_id": "researcher-1-id",
                 "role": "member",
                 "request_options": calls[4]["request_options"],
             },
             {
+                "method": "add_agent_chat_participant",
+                "chat_id": "room-id",
+                "participant_id": "researcher-2-id",
+                "role": "member",
+                "request_options": calls[5]["request_options"],
+            },
+            {
                 "method": "create_agent_chat_message",
                 "chat_id": "room-id",
-                "content": calls[5]["content"],
+                "content": calls[6]["content"],
                 "mentions": [
                     {
                         "id": "orchestrator-id",
@@ -215,13 +233,15 @@ def test_setup_research_room_creates_room_adds_agents_and_sends_kickoff() -> Non
                         "name": "research_orchestrator",
                     }
                 ],
-                "request_options": calls[5]["request_options"],
+                "request_options": calls[6]["request_options"],
             },
         ]
-        assert "@research_orchestrator" in calls[5]["content"]
-        assert "Original task:" in calls[5]["content"]
-        assert "Investigate the market." in calls[5]["content"]
-        assert "research_planner" in calls[5]["content"]
+        assert "@research_orchestrator" in calls[6]["content"]
+        assert "Original task:" in calls[6]["content"]
+        assert "Investigate the market." in calls[6]["content"]
+        assert "research_planner" in calls[6]["content"]
+        assert "medior" in calls[6]["content"]
+        assert "Expect the answer" in calls[6]["content"]
 
     asyncio.run(scenario())
 
@@ -255,7 +275,17 @@ def test_setup_research_room_validates_task_and_configured_agents() -> None:
                 agent_specs=build_agent_specs(),
             )
 
-        specs_without_researchers = build_agent_specs()[:2]
+        definitions = build_agent_definitions()
+        definitions.pop("medior")
+        with pytest.raises(ValueError, match="medior"):
+            await setup_research_room(
+                client=client,
+                task="Question",
+                agent_definitions=definitions,
+                agent_specs=build_agent_specs(),
+            )
+
+        specs_without_researchers = build_agent_specs()[:3]
         with pytest.raises(ValueError, match="researcher"):
             await setup_research_room(
                 client=client,

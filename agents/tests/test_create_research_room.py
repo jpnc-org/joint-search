@@ -103,6 +103,7 @@ def test_create_research_room_loads_config_resolves_handle_and_sets_up_room(
             "owner/research-orchestrator"
         )
         assert calls["setup_kwargs"]["planner_name"] == "research_planner"
+        assert calls["setup_kwargs"]["medior_name"] == "medior"
         assert calls["setup_kwargs"]["agent_definitions"] is agent_definitions
 
     asyncio.run(scenario())

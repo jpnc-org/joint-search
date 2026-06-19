@@ -176,8 +176,8 @@ def test_all_top_level_agent_modules_register_default_specs(
         "agents.definitions",
         "agents.definitions.research_orchestrator",
         "agents.definitions.research_planner",
+        "agents.definitions.medior",
         "agents.definitions.researcher",
-        "agents.definitions.test_tool_agent",
     ):
         monkeypatch.delitem(sys.modules, module_name, raising=False)
 
@@ -188,6 +188,7 @@ def test_all_top_level_agent_modules_register_default_specs(
     assert [spec.name for spec in specs] == [
         "research_orchestrator",
         "research_planner",
+        "medior",
         "researcher_1",
         "researcher_2",
         "researcher_3",
@@ -195,7 +196,15 @@ def test_all_top_level_agent_modules_register_default_specs(
     assert specs[0].agent_type is AgentType.ORCHESTRATOR
     assert "evaluate the final draft quality" in specs[0].instructions
     assert "one second-pass revision" in specs[0].instructions
+    assert "send_final_answer_to_backend" in specs[0].instructions
     assert "room-wide task event" in specs[0].instructions
+    assert len(specs[0].tools) == 1
+    assert specs[0].tools[0].name == "send_final_answer_to_backend"
+    assert set(specs[0].tools[0].args) == {
+        "final_answer",
+        "conversation_id",
+        "room_id",
+    }
     assert specs[1].agent_type is AgentType.ORCHESTRATOR
     assert "Break the user's question into researchable subtopics" in (
         specs[1].instructions
@@ -204,17 +213,32 @@ def test_all_top_level_agent_modules_register_default_specs(
     assert "synthesize a draft answer" in specs[1].instructions
     assert "research_orchestrator" in specs[1].instructions
     assert "do not research the subtopics yourself" in (specs[1].instructions)
-    for spec in specs[2:5]:
+    assert "medior" in specs[1].instructions
+    assert "debate" in specs[1].instructions
+    assert specs[2].agent_type is AgentType.ORCHESTRATOR
+    assert "debate coordinator" in specs[2].instructions
+    assert "key agreements" in specs[2].instructions
+    assert "contradictions" in specs[2].instructions
+    assert "FINAL SYNTHESIS" in specs[2].instructions
+    for spec in specs[3:6]:
         assert spec.agent_type is AgentType.RESEARCHER
         assert "research the subtopic assigned to you" in spec.instructions
+        assert "perplexity_search" in spec.instructions
+        assert "1 or 2 high-quality web searches" in spec.instructions
+        assert "medior" in spec.instructions
+        assert "debate" in spec.instructions
         assert "sources" in spec.instructions
         assert "limitations" in spec.instructions
         assert "research_planner" in spec.instructions
-    for spec in specs[:5]:
+        assert len(spec.tools) == 1
+        assert spec.tools[0].name == "perplexity_search"
+        assert set(spec.tools[0].args) == {"query"}
+    for spec in specs[:6]:
         assert "\n\n" in spec.instructions
         assert not spec.instructions.startswith(" ")
-        assert "band_send_message" not in spec.instructions
         assert "tool call" not in spec.instructions
+    for spec in (specs[0], specs[1], *specs[3:6]):
+        assert "band_send_message" not in spec.instructions
 
 
 def test_research_planner_keeps_decomposition_role(monkeypatch: MonkeyPatch) -> None:
@@ -224,8 +248,8 @@ def test_research_planner_keeps_decomposition_role(monkeypatch: MonkeyPatch) -> 
         "agents.definitions",
         "agents.definitions.research_orchestrator",
         "agents.definitions.research_planner",
+        "agents.definitions.medior",
         "agents.definitions.researcher",
-        "agents.definitions.test_tool_agent",
     ):
         monkeypatch.delitem(sys.modules, module_name, raising=False)
 
@@ -238,6 +262,8 @@ def test_research_planner_keeps_decomposition_role(monkeypatch: MonkeyPatch) -> 
     assert "assign subtopics to the researcher agents" in planner.instructions
     assert "synthesize a draft answer" in planner.instructions
     assert "research_orchestrator" in planner.instructions
+    assert "medior" in planner.instructions
+    assert "debate" in planner.instructions
 
 
 def test_research_orchestrator_quality_control_role(
@@ -249,8 +275,8 @@ def test_research_orchestrator_quality_control_role(
         "agents.definitions",
         "agents.definitions.research_orchestrator",
         "agents.definitions.research_planner",
+        "agents.definitions.medior",
         "agents.definitions.researcher",
-        "agents.definitions.test_tool_agent",
     ):
         monkeypatch.delitem(sys.modules, module_name, raising=False)
 
@@ -263,7 +289,36 @@ def test_research_orchestrator_quality_control_role(
     assert "delegate topic decomposition to research_planner" in (specs[0].instructions)
     assert "evaluate the final draft quality" in orchestrator.instructions
     assert "one second-pass revision" in orchestrator.instructions
+    assert "send_final_answer_to_backend" in orchestrator.instructions
     assert "room-wide task event" in orchestrator.instructions
+    assert len(orchestrator.tools) == 1
+    assert orchestrator.tools[0].name == "send_final_answer_to_backend"
+
+
+def test_medior_debate_coordinator_role(monkeypatch: MonkeyPatch) -> None:
+    clear_agent_specs(monkeypatch)
+
+    for module_name in (
+        "agents.definitions",
+        "agents.definitions.research_orchestrator",
+        "agents.definitions.research_planner",
+        "agents.definitions.medior",
+        "agents.definitions.researcher",
+    ):
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
+
+    importlib.import_module("agents.definitions")
+
+    specs = registry_module.iter_agent_specs()
+    medior = next(spec for spec in specs if spec.name == "medior")
+
+    assert medior.agent_type is AgentType.ORCHESTRATOR
+    assert "debate coordinator" in medior.instructions
+    assert "key agreements" in medior.instructions
+    assert "contradictions" in medior.instructions
+    assert "ask the researcher agents to compare" in medior.instructions
+    assert "synthesizing their findings into a final response" in (medior.instructions)
+    assert "FINAL SYNTHESIS" in medior.instructions
 
 
 def test_agent_tool_decorator_creates_tool(monkeypatch: MonkeyPatch) -> None:
