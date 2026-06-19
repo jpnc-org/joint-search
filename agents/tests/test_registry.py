@@ -146,19 +146,22 @@ def test_build_agent_prompt_adds_band_tool_call_instructions() -> None:
 
     assert "Role-specific instructions." in prompt
     assert "band_send_message" in prompt
+    assert "band_send_event" in prompt
     assert "tool call" in prompt
     assert "normal assistant message" in prompt
     assert "plain final text response" in prompt
     assert "mentions" in prompt
-    assert "\n\nIn the tool call" in prompt
+    assert "room-wide" in prompt
+    assert "final answer" in prompt
     assert "chat.\n\n" in prompt
 
 
 def test_build_agent_prompt_handles_empty_role_instructions() -> None:
     prompt = build_agent_prompt("")
 
-    assert prompt.startswith("Every answer to a Band message")
+    assert prompt.startswith("Every visible Band response")
     assert "band_send_message" in prompt
+    assert "band_send_event" in prompt
     assert "\n\n" in prompt
     assert not prompt.startswith(" ")
 
