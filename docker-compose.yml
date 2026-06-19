@@ -68,6 +68,8 @@ services:
     expose:
       - "3001"
     depends_on:
+      agents-api:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       minio:
@@ -76,6 +78,36 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_healthy
+
+  agents-api:
+    build: ./agents
+    env_file: .env
+    restart: unless-stopped
+    environment:
+      AGENT_CONFIG_PATH: /app/agent_config.yaml
+      AGENTS_RESEARCH_TIMEOUT_SECONDS: ${AGENTS_RESEARCH_TIMEOUT_SECONDS:-900}
+      BAND_REST_URL: ${BAND_REST_URL:-https://app.band.ai/api/v1}
+      BAND_WS_URL: ${BAND_WS_URL:-wss://app.band.ai/api/v1/socket/websocket}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.aimlapi.com/v1}
+    volumes:
+      - ./agents/agent_config.yaml:/app/agent_config.yaml:ro
+    expose:
+      - "8001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "uv",
+          "run",
+          "--no-sync",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   rag-worker:
     build: ./rag-worker
