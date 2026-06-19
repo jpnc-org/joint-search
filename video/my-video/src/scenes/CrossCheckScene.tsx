@@ -42,7 +42,7 @@ const ChatMessage = ({ author, children, delay, medior = false }: ChatMessagePro
     >
       <div
         className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
-          medior ? "bg-primary/20 text-primary" : "bg-secondary text-foreground"
+          medior ? "bg-primary/12 text-primary" : "bg-secondary text-foreground"
         }`}
       >
         {medior ? (
@@ -54,7 +54,7 @@ const ChatMessage = ({ author, children, delay, medior = false }: ChatMessagePro
       <div
         className={`rounded-2xl border p-4 ${
           medior
-            ? "border-primary/40 bg-primary/10 shadow-[0_0_34px_rgba(105,92,255,0.14)]"
+            ? "border-primary/25 bg-primary/6 shadow-[0_0_20px_rgba(105,92,255,0.07)]"
             : "border-border/60 bg-card/85"
         }`}
       >
@@ -83,7 +83,7 @@ export default function CrossCheckScene() {
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
         speed={0.035}
-        baseOpacity={0.32}
+        baseOpacity={0.18}
         hoverDistance={0}
       />
 
@@ -110,7 +110,7 @@ export default function CrossCheckScene() {
             transform: `translateY(${panelY}px)`,
           }}
         >
-          <Card className="border-primary/25 bg-card/90 p-6 shadow-[0_0_38px_rgba(105,92,255,0.12)] backdrop-blur-xl">
+          <Card className="border-primary/20 bg-card/90 p-6 shadow-[0_0_22px_rgba(105,92,255,0.06)] backdrop-blur-xl">
             <div className="mb-5 flex items-center gap-3">
               <MessageSquare className="size-6 text-primary" />
               <div>
@@ -147,8 +147,8 @@ export default function CrossCheckScene() {
             </div>
           </Card>
 
-          <Card className="relative overflow-hidden border-primary/25 bg-card/90 p-6 shadow-[0_0_38px_rgba(105,92,255,0.12)] backdrop-blur-xl">
-            <div className="absolute -inset-10 bg-primary/10 blur-3xl" />
+          <Card className="relative overflow-hidden border-primary/20 bg-card/90 p-6 shadow-[0_0_22px_rgba(105,92,255,0.06)] backdrop-blur-xl">
+            <div className="absolute -inset-10 bg-primary/5 blur-3xl" />
             <div className="relative space-y-4">
               <ChatMessage author="Researcher 1" delay={80}>
                 <Mention>@Researcher 2</Mention> market sources agree demand is

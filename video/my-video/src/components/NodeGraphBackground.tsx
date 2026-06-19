@@ -59,7 +59,7 @@ export const NodeGraphBackground = ({
   linkDistance = 100,
   colors = DEFAULT_COLORS,
   linkColor = "#7c3aed",
-  baseOpacity = 0.45,
+  baseOpacity = 0.24,
   seed = 1,
 }: Props) => {
   const frame = useCurrentFrame();
@@ -151,7 +151,7 @@ export const NodeGraphBackground = ({
               height: `${size}px`,
               borderRadius: "999px",
               background: hexToRgba(n.color, baseOpacity),
-              boxShadow: `0 0 ${size * 1.8}px ${hexToRgba(n.color, baseOpacity * 0.45)}`,
+              boxShadow: `0 0 ${size}px ${hexToRgba(n.color, baseOpacity * 0.25)}`,
               transform: "translate(-50%, -50%)",
             }}
           />

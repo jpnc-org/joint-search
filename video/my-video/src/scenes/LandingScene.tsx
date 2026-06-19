@@ -29,7 +29,7 @@ export default function LandingScene() {
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
-        baseOpacity={0.35}
+        baseOpacity={0.18}
         hoverDistance={0}
       />
 

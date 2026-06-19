@@ -35,9 +35,9 @@ const GlowCard = ({ children, className = "", delay }: GlowCardProps) => {
       className="relative"
       style={{ opacity, transform: `translateY(${y}px)` }}
     >
-      <div className="absolute -inset-6 rounded-[30px] bg-primary/12 blur-3xl" />
+      <div className="absolute -inset-5 rounded-[30px] bg-primary/6 blur-3xl" />
       <Card
-        className={`relative border-primary/25 bg-card/90 shadow-[0_0_38px_rgba(105,92,255,0.12)] backdrop-blur-xl ${className}`}
+        className={`relative border-primary/20 bg-card/90 shadow-[0_0_22px_rgba(105,92,255,0.06)] backdrop-blur-xl ${className}`}
       >
         {children}
       </Card>
@@ -78,7 +78,7 @@ export default function IntroScene() {
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={52}
         speed={0.035}
-        baseOpacity={0.32}
+        baseOpacity={0.18}
         hoverDistance={0}
       />
 

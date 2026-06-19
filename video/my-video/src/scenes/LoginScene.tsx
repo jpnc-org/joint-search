@@ -54,7 +54,7 @@ export default function LoginScene() {
         <NodeGraphBackground
           className="absolute inset-0 h-full w-full"
           density={40}
-          baseOpacity={0.3}
+          baseOpacity={0.16}
           hoverDistance={0}
         />
       </div>

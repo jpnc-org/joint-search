@@ -57,11 +57,11 @@ const HandoffCard = ({
       className="relative"
       style={{ opacity, transform: `translateY(${y}px)` }}
     >
-      <div className="absolute -inset-6 rounded-[30px] bg-primary/12 blur-3xl" />
-      <Card className="relative w-[320px] border-primary/25 bg-card/90 p-6 shadow-[0_0_38px_rgba(105,92,255,0.12)] backdrop-blur-xl">
+      <div className="absolute -inset-5 rounded-[30px] bg-primary/6 blur-3xl" />
+      <Card className="relative w-[320px] border-primary/20 bg-card/90 p-6 shadow-[0_0_22px_rgba(105,92,255,0.06)] backdrop-blur-xl">
         <CardHeader className="p-0">
           <div className="mb-4 flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
               {icon}
             </div>
             <CardTitle className="text-xl">{title}</CardTitle>
@@ -99,7 +99,7 @@ export default function SynthesisScene() {
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
         speed={0.035}
-        baseOpacity={0.32}
+        baseOpacity={0.18}
         hoverDistance={0}
       />
 
@@ -153,7 +153,7 @@ export default function SynthesisScene() {
         </div>
 
         <Card
-          className="mt-10 w-full max-w-4xl border-primary/30 bg-primary/10 p-5 shadow-[0_0_42px_rgba(105,92,255,0.14)] backdrop-blur-xl"
+          className="mt-10 w-full max-w-4xl border-primary/20 bg-primary/6 p-5 shadow-[0_0_22px_rgba(105,92,255,0.07)] backdrop-blur-xl"
           style={{
             opacity: packageOpacity,
             transform: `translateY(${packageY}px)`,

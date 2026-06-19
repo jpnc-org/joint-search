@@ -57,11 +57,11 @@ const NodeCard = ({
       className="relative"
       style={{ opacity, transform: `translateY(${y}px)` }}
     >
-      <div className="absolute -inset-6 rounded-[30px] bg-primary/12 blur-3xl" />
-      <Card className="relative w-[290px] border-primary/25 bg-card/90 p-6 shadow-[0_0_38px_rgba(105,92,255,0.12)] backdrop-blur-xl">
+      <div className="absolute -inset-5 rounded-[30px] bg-primary/6 blur-3xl" />
+      <Card className="relative w-[290px] border-primary/20 bg-card/90 p-6 shadow-[0_0_22px_rgba(105,92,255,0.06)] backdrop-blur-xl">
         <CardHeader className="p-0">
           <div className="mb-4 flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-primary/15 text-primary shadow-[0_0_16px_rgba(105,92,255,0.18)]">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-[0_0_10px_rgba(105,92,255,0.08)]">
               {icon}
             </div>
             <CardTitle className="text-xl">{title}</CardTitle>
@@ -117,7 +117,7 @@ export default function ArchitectureScene() {
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={52}
         speed={0.035}
-        baseOpacity={0.32}
+        baseOpacity={0.18}
         hoverDistance={0}
       />
 
@@ -180,8 +180,8 @@ export default function ArchitectureScene() {
               className="absolute -bottom-40 left-1/2 flex -translate-x-1/2 items-center gap-4"
               style={{ opacity: appear(frame, 255) }}
             >
-              <div className="absolute -inset-6 rounded-[28px] bg-primary/12 blur-3xl" />
-              <Card className="relative w-[280px] border-primary/30 bg-primary/10 p-5 shadow-[0_0_34px_rgba(105,92,255,0.14)] backdrop-blur-xl">
+              <div className="absolute -inset-5 rounded-[28px] bg-primary/6 blur-3xl" />
+              <Card className="relative w-[280px] border-primary/20 bg-primary/6 p-5 shadow-[0_0_20px_rgba(105,92,255,0.07)] backdrop-blur-xl">
                 <div className="flex items-center gap-4">
                   <Sparkles className="size-7 text-primary" />
                   <div>
