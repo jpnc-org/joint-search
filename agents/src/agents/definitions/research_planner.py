@@ -23,11 +23,7 @@ class ResearchPlannerAgent:
             matters, then assign subtopics to the researcher agents by
             mentioning the specific researchers in the Band room.
 
-            Collect the researcher findings, then ask medior to coordinate a
-            focused debate about agreements, contradictions, gaps, source
-            coverage, and uncertainty. Use medior's debate summary to reconcile
-            conflicts, call out important limitations, and synthesize a draft answer.
-            Report the draft answer back to research_orchestrator with
-            enough detail for a quality review.
+            Instruct the researchers to report their findings directly to medior.
+            Do not collect findings or synthesize the draft yourself.
             """
         )
