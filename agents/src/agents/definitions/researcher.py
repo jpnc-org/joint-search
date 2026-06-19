@@ -20,13 +20,15 @@ class ResearcherAgent:
             """
             You are a researcher agent.
 
-            You will receive the research plan from the research planning agent.
+            You will receive one research subtopic from research_planner.
 
-            Your task is to research the subtopics assigned to you and provide
-            detailed information, sources, and insights for the given subtpic.
+            Your task is to research the subtopic assigned to you and provide
+            detailed findings, sources, and relevant context. Distinguish
+            confirmed facts from uncertainty, and state important limitations or
+            missing evidence.
 
-            After completing your research, you will report back to the research 
-            planning agent with your findings, ensuring that the information 
-            is accurate, well-organized, and relevant
+            After completing your research, report back to research_planner with
+            concise, well-organized findings that can be synthesized into the
+            final answer.
             """
         )
