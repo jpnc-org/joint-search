@@ -10,9 +10,7 @@ import ColdOpenScene from "./scenes/ColdOpenScene";
 import ProblemScene from "./scenes/ProblemScene";
 import LandingScene from "./scenes/LandingScene";
 import LoginScene from "./scenes/LoginScene";
-import OrchestratorScene from "./scenes/OrchestratorScene";
-import PlannerScene from "./scenes/PlannerScene";
-import ResearchersScene from "./scenes/ResearchersScene";
+import ArchitectureScene from "./scenes/ArchitectureScene";
 import CrossCheckScene from "./scenes/CrossCheckScene";
 import SynthesisScene from "./scenes/SynthesisScene";
 import ChatScene from "./scenes/ChatScene";
@@ -26,17 +24,13 @@ const LOGIN_START = 720;
 const LOGIN_DURATION = 150;
 const POST_LOGIN_CHAT_START = 870;
 const POST_LOGIN_CHAT_DURATION = 480;
-const ORCHESTRATOR_START = 1350;
-const ORCHESTRATOR_DURATION = 300;
-const PLANNER_START = 1650;
-const PLANNER_DURATION = 360;
-const RESEARCHERS_START = 2010;
-const RESEARCHERS_DURATION = 360;
-const CROSSCHECK_START = 2370;
+const ARCHITECTURE_START = 1350;
+const ARCHITECTURE_DURATION = 570;
+const CROSSCHECK_START = 1920;
 const CROSSCHECK_DURATION = 360;
-const SYNTHESIS_START = 2730;
+const SYNTHESIS_START = 2280;
 const SYNTHESIS_DURATION = 330;
-const CHAT_START = 3060;
+const CHAT_START = 2610;
 const CHAT_DURATION = 210;
 const SCENE_TRANSITION_DURATION = 24;
 
@@ -145,44 +139,30 @@ export const MyComposition = () => {
         <ChatScene animateQueryInput />
       </SceneSequence>
       <SceneSequence
-        from={ORCHESTRATOR_START}
-        durationInFrames={ORCHESTRATOR_DURATION}
+        from={ARCHITECTURE_START}
+        durationInFrames={ARCHITECTURE_DURATION}
         zIndex={6}
       >
-        <OrchestratorScene />
-      </SceneSequence>
-      <SceneSequence
-        from={PLANNER_START}
-        durationInFrames={PLANNER_DURATION}
-        zIndex={7}
-      >
-        <PlannerScene />
-      </SceneSequence>
-      <SceneSequence
-        from={RESEARCHERS_START}
-        durationInFrames={RESEARCHERS_DURATION}
-        zIndex={8}
-      >
-        <ResearchersScene />
+        <ArchitectureScene />
       </SceneSequence>
       <SceneSequence
         from={CROSSCHECK_START}
         durationInFrames={CROSSCHECK_DURATION}
-        zIndex={9}
+        zIndex={7}
       >
         <CrossCheckScene />
       </SceneSequence>
       <SceneSequence
         from={SYNTHESIS_START}
         durationInFrames={SYNTHESIS_DURATION}
-        zIndex={10}
+        zIndex={8}
       >
         <SynthesisScene />
       </SceneSequence>
       <SceneSequence
         from={CHAT_START}
         durationInFrames={CHAT_DURATION}
-        zIndex={11}
+        zIndex={9}
       >
         <ChatScene />
       </SceneSequence>
@@ -196,9 +176,7 @@ export const compositionDuration =
   LANDING_DURATION +
   LOGIN_DURATION +
   POST_LOGIN_CHAT_DURATION +
-  ORCHESTRATOR_DURATION +
-  PLANNER_DURATION +
-  RESEARCHERS_DURATION +
+  ARCHITECTURE_DURATION +
   CROSSCHECK_DURATION +
   SYNTHESIS_DURATION +
   CHAT_DURATION;
