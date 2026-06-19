@@ -10,7 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { NodeGraphBackground, Sparkle } from "performative-ui";
+import { NodeGraphBackground } from "../components/NodeGraphBackground";
+import { Sparkle } from "performative-ui";
 
 const typeText = (text: string, frame: number, start: number, speed = 2.4) => {
   const length = Math.max(0, Math.floor((frame - start) / speed));

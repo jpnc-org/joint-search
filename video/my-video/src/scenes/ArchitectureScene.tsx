@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { NodeGraphBackground } from "performative-ui";
+import { NodeGraphBackground } from "../components/NodeGraphBackground";
 
 const appear = (frame: number, start: number) =>
   interpolate(frame, [start, start + 18], [0, 1], {
@@ -116,7 +116,7 @@ export default function ArchitectureScene() {
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={52}
-        speed={0.001}
+        speed={0.035}
         baseOpacity={0.32}
         hoverDistance={0}
       />

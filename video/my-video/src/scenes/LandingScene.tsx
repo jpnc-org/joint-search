@@ -1,12 +1,11 @@
 import { FileText, Layers } from "lucide-react";
 import { Easing, interpolate, useCurrentFrame } from "remotion";
 import { Button } from "../components/ui/button";
+import { NodeGraphBackground } from "../components/NodeGraphBackground";
 import {
   GlassCard,
   Sparkle,
   EyebrowPill,
-  NodeGraphBackground,
-  FloatingSparkles,
   BeforeAfter,
   SlippyWords,
   WordRoll,
@@ -32,12 +31,6 @@ export default function LandingScene() {
         density={50}
         baseOpacity={0.35}
         hoverDistance={0}
-      />
-      <FloatingSparkles
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        count={14}
-        sizeRange={[8, 16]}
-        durationS={[12, 24]}
       />
 
       <nav className="absolute top-0 z-20 flex w-full items-center justify-between border-b border-border/40 bg-background/80 px-6 py-5 backdrop-blur-md">
