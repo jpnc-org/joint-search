@@ -1,4 +1,11 @@
-import { AbsoluteFill, Sequence } from "remotion";
+import type { ReactNode } from "react";
+import {
+  AbsoluteFill,
+  Easing,
+  interpolate,
+  Sequence,
+  useCurrentFrame,
+} from "remotion";
 import ColdOpenScene from "./scenes/ColdOpenScene";
 import ProblemScene from "./scenes/ProblemScene";
 import LandingScene from "./scenes/LandingScene";
@@ -29,40 +36,147 @@ const SYNTHESIS_START = 2250;
 const SYNTHESIS_DURATION = 330;
 const CHAT_START = 2580;
 const CHAT_DURATION = 210;
+const SCENE_TRANSITION_DURATION = 24;
+
+type SceneSequenceProps = {
+  children: ReactNode;
+  durationInFrames: number;
+  from?: number;
+  isFirst?: boolean;
+  zIndex: number;
+};
+
+const SceneTransition = ({
+  children,
+  isFirst = false,
+}: {
+  children: ReactNode;
+  isFirst?: boolean;
+}) => {
+  const frame = useCurrentFrame();
+  const opacity = isFirst
+    ? 1
+    : interpolate(frame, [0, SCENE_TRANSITION_DURATION], [0, 1], {
+        easing: Easing.out(Easing.cubic),
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
+  const y = isFirst
+    ? 0
+    : interpolate(frame, [0, SCENE_TRANSITION_DURATION], [18, 0], {
+        easing: Easing.out(Easing.cubic),
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
+  const scale = isFirst
+    ? 1
+    : interpolate(frame, [0, SCENE_TRANSITION_DURATION], [0.985, 1], {
+        easing: Easing.out(Easing.cubic),
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
+
+  return (
+    <AbsoluteFill
+      style={{
+        opacity,
+        transform: `translateY(${y}px) scale(${scale})`,
+      }}
+    >
+      {children}
+    </AbsoluteFill>
+  );
+};
+
+const SceneSequence = ({
+  children,
+  durationInFrames,
+  from,
+  isFirst = false,
+  zIndex,
+}: SceneSequenceProps) => (
+  <Sequence
+    from={from}
+    durationInFrames={durationInFrames + SCENE_TRANSITION_DURATION}
+    style={{ zIndex }}
+  >
+    <SceneTransition isFirst={isFirst}>{children}</SceneTransition>
+  </Sequence>
+);
 
 export const MyComposition = () => {
   return (
     <AbsoluteFill className="bg-background text-foreground">
-      <Sequence durationInFrames={COLD_OPEN_DURATION}>
+      <SceneSequence
+        durationInFrames={COLD_OPEN_DURATION}
+        isFirst
+        zIndex={1}
+      >
         <ColdOpenScene />
-      </Sequence>
-      <Sequence from={PROBLEM_START} durationInFrames={PROBLEM_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={PROBLEM_START}
+        durationInFrames={PROBLEM_DURATION}
+        zIndex={2}
+      >
         <ProblemScene />
-      </Sequence>
-      <Sequence from={LANDING_START} durationInFrames={LANDING_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={LANDING_START}
+        durationInFrames={LANDING_DURATION}
+        zIndex={3}
+      >
         <LandingScene />
-      </Sequence>
-      <Sequence from={LOGIN_START} durationInFrames={LOGIN_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={LOGIN_START}
+        durationInFrames={LOGIN_DURATION}
+        zIndex={4}
+      >
         <LoginScene />
-      </Sequence>
-      <Sequence from={ORCHESTRATOR_START} durationInFrames={ORCHESTRATOR_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={ORCHESTRATOR_START}
+        durationInFrames={ORCHESTRATOR_DURATION}
+        zIndex={5}
+      >
         <OrchestratorScene />
-      </Sequence>
-      <Sequence from={PLANNER_START} durationInFrames={PLANNER_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={PLANNER_START}
+        durationInFrames={PLANNER_DURATION}
+        zIndex={6}
+      >
         <PlannerScene />
-      </Sequence>
-      <Sequence from={RESEARCHERS_START} durationInFrames={RESEARCHERS_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={RESEARCHERS_START}
+        durationInFrames={RESEARCHERS_DURATION}
+        zIndex={7}
+      >
         <ResearchersScene />
-      </Sequence>
-      <Sequence from={CROSSCHECK_START} durationInFrames={CROSSCHECK_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={CROSSCHECK_START}
+        durationInFrames={CROSSCHECK_DURATION}
+        zIndex={8}
+      >
         <CrossCheckScene />
-      </Sequence>
-      <Sequence from={SYNTHESIS_START} durationInFrames={SYNTHESIS_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={SYNTHESIS_START}
+        durationInFrames={SYNTHESIS_DURATION}
+        zIndex={9}
+      >
         <SynthesisScene />
-      </Sequence>
-      <Sequence from={CHAT_START} durationInFrames={CHAT_DURATION}>
+      </SceneSequence>
+      <SceneSequence
+        from={CHAT_START}
+        durationInFrames={CHAT_DURATION}
+        zIndex={10}
+      >
         <ChatScene />
-      </Sequence>
+      </SceneSequence>
     </AbsoluteFill>
   );
 };
