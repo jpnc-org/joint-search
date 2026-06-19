@@ -6,8 +6,7 @@ import {
   Sequence,
   useCurrentFrame,
 } from "remotion";
-import ColdOpenScene from "./scenes/ColdOpenScene";
-import ProblemScene from "./scenes/ProblemScene";
+import IntroScene from "./scenes/IntroScene";
 import LandingScene from "./scenes/LandingScene";
 import LoginScene from "./scenes/LoginScene";
 import ArchitectureScene from "./scenes/ArchitectureScene";
@@ -15,9 +14,7 @@ import CrossCheckScene from "./scenes/CrossCheckScene";
 import SynthesisScene from "./scenes/SynthesisScene";
 import ChatScene from "./scenes/ChatScene";
 
-const COLD_OPEN_DURATION = 210;
-const PROBLEM_START = 210;
-const PROBLEM_DURATION = 240;
+const INTRO_DURATION = 450;
 const LANDING_START = 450;
 const LANDING_DURATION = 270;
 const LOGIN_START = 720;
@@ -104,65 +101,58 @@ export const MyComposition = () => {
   return (
     <AbsoluteFill className="bg-background text-foreground">
       <SceneSequence
-        durationInFrames={COLD_OPEN_DURATION}
+        durationInFrames={INTRO_DURATION}
         isFirst
         zIndex={1}
       >
-        <ColdOpenScene />
-      </SceneSequence>
-      <SceneSequence
-        from={PROBLEM_START}
-        durationInFrames={PROBLEM_DURATION}
-        zIndex={2}
-      >
-        <ProblemScene />
+        <IntroScene />
       </SceneSequence>
       <SceneSequence
         from={LANDING_START}
         durationInFrames={LANDING_DURATION}
-        zIndex={3}
+        zIndex={2}
       >
         <LandingScene />
       </SceneSequence>
       <SceneSequence
         from={LOGIN_START}
         durationInFrames={LOGIN_DURATION}
-        zIndex={4}
+        zIndex={3}
       >
         <LoginScene />
       </SceneSequence>
       <SceneSequence
         from={POST_LOGIN_CHAT_START}
         durationInFrames={POST_LOGIN_CHAT_DURATION}
-        zIndex={5}
+        zIndex={4}
       >
         <ChatScene animateQueryInput />
       </SceneSequence>
       <SceneSequence
         from={ARCHITECTURE_START}
         durationInFrames={ARCHITECTURE_DURATION}
-        zIndex={6}
+        zIndex={5}
       >
         <ArchitectureScene />
       </SceneSequence>
       <SceneSequence
         from={CROSSCHECK_START}
         durationInFrames={CROSSCHECK_DURATION}
-        zIndex={7}
+        zIndex={6}
       >
         <CrossCheckScene />
       </SceneSequence>
       <SceneSequence
         from={SYNTHESIS_START}
         durationInFrames={SYNTHESIS_DURATION}
-        zIndex={8}
+        zIndex={7}
       >
         <SynthesisScene />
       </SceneSequence>
       <SceneSequence
         from={CHAT_START}
         durationInFrames={CHAT_DURATION}
-        zIndex={9}
+        zIndex={8}
       >
         <ChatScene />
       </SceneSequence>
@@ -171,8 +161,7 @@ export const MyComposition = () => {
 };
 
 export const compositionDuration =
-  COLD_OPEN_DURATION +
-  PROBLEM_DURATION +
+  INTRO_DURATION +
   LANDING_DURATION +
   LOGIN_DURATION +
   POST_LOGIN_CHAT_DURATION +
