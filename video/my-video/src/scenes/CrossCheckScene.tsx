@@ -82,6 +82,7 @@ export default function CrossCheckScene() {
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
+        speed={0.001}
         baseOpacity={0.32}
         hoverDistance={0}
       />
