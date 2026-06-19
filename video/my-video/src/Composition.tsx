@@ -13,6 +13,7 @@ import ArchitectureScene from "./scenes/ArchitectureScene";
 import CrossCheckScene from "./scenes/CrossCheckScene";
 import SynthesisScene from "./scenes/SynthesisScene";
 import ChatScene from "./scenes/ChatScene";
+import FinalScene from "./scenes/FinalScene";
 
 const INTRO_DURATION = 450;
 const LANDING_START = 450;
@@ -29,6 +30,8 @@ const SYNTHESIS_START = 2040;
 const SYNTHESIS_DURATION = 330;
 const CHAT_START = 2370;
 const CHAT_DURATION = 210;
+const FINAL_START = 2580;
+const FINAL_DURATION = 180;
 const SCENE_TRANSITION_DURATION = 24;
 
 type SceneSequenceProps = {
@@ -156,6 +159,13 @@ export const MyComposition = () => {
       >
         <ChatScene />
       </SceneSequence>
+      <SceneSequence
+        from={FINAL_START}
+        durationInFrames={FINAL_DURATION}
+        zIndex={9}
+      >
+        <FinalScene />
+      </SceneSequence>
     </AbsoluteFill>
   );
 };
@@ -168,4 +178,5 @@ export const compositionDuration =
   ARCHITECTURE_DURATION +
   CROSSCHECK_DURATION +
   SYNTHESIS_DURATION +
-  CHAT_DURATION;
+  CHAT_DURATION +
+  FINAL_DURATION;

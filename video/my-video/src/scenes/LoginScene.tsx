@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { NodeGraphBackground } from "../components/NodeGraphBackground";
-import { Sparkle } from "performative-ui";
 
 const typeText = (text: string, frame: number, start: number, speed = 2.4) => {
   const length = Math.max(0, Math.floor((frame - start) / speed));
@@ -68,7 +67,6 @@ export default function LoginScene() {
         <Card className="w-[440px] border-border/60 bg-card/80 backdrop-blur-xl">
           <CardHeader className="text-center">
             <div className="mb-2 flex items-center justify-center gap-1.5">
-              <Sparkle />{" "}
               <CardTitle className="text-xl">JointSearch</CardTitle>
             </div>
             <CardDescription>Sign in to your account</CardDescription>

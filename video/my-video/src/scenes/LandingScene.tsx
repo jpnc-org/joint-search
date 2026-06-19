@@ -177,7 +177,7 @@ export default function LandingScene() {
         <footer className="w-full border-t border-border">
           <div className="mx-auto flex w-full max-w-6xl items-center px-6 py-6 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <Sparkle solid /> JointSearch
+              JointSearch
             </div>
           </div>
         </footer>

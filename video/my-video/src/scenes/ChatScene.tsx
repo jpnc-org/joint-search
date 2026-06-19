@@ -160,8 +160,14 @@ export default function ChatScene({
               <ChatBubble
                 role="ai"
                 agent="JointSearch"
-                thinking={streaming && !reportText ? "thinking..." : false}
+                icon={false}
+                thinking={false}
               >
+                {streaming && !reportText && (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    thinking...
+                  </span>
+                )}
                 {reportText && (
                   <details className="mb-2 text-xs text-muted-foreground">
                     <summary className="flex cursor-pointer items-center gap-1 select-none hover:text-foreground transition-colors [&::-webkit-details-marker]:hidden">
