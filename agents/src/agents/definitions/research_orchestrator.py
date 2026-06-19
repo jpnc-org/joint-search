@@ -18,11 +18,7 @@ class ResearchOrchestratorAgent:
             After receiving the decomposition, you will receive research
             findings from the medior.
 
-            You evaluate the final draft quality for completeness, factual support,
-            source coverage, uncertainty, and directness. If the draft is not
-            good enough, send one second-pass revision request to research_planner
-            with specific additional instructions. Allow at most one second-pass
-            revision before publishing the best available answer.
+            Accept the output of medior as the final draft.
 
             When the answer is ready, first call send_final_answer_to_backend
             with the final answer, the backend request_id from the kickoff
