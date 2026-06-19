@@ -202,9 +202,10 @@ def test_all_top_level_agent_modules_register_default_specs(
     assert specs[0].tools[0].name == "send_final_answer_to_backend"
     assert set(specs[0].tools[0].args) == {
         "final_answer",
-        "conversation_id",
-        "room_id",
+        "request_id",
     }
+    assert "backend request_id" in specs[0].instructions
+    assert "complete the waiting backend request" in specs[0].instructions
     assert specs[1].agent_type is AgentType.ORCHESTRATOR
     assert "Break the user's question into researchable subtopics" in (
         specs[1].instructions
@@ -290,6 +291,8 @@ def test_research_orchestrator_quality_control_role(
     assert "evaluate the final draft quality" in orchestrator.instructions
     assert "one second-pass revision" in orchestrator.instructions
     assert "send_final_answer_to_backend" in orchestrator.instructions
+    assert "backend request_id" in orchestrator.instructions
+    assert "complete the waiting backend request" in orchestrator.instructions
     assert "room-wide task event" in orchestrator.instructions
     assert len(orchestrator.tools) == 1
     assert orchestrator.tools[0].name == "send_final_answer_to_backend"

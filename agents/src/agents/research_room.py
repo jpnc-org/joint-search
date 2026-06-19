@@ -174,17 +174,42 @@ def select_research_room_participant_names(
 def build_research_room_kickoff_message(
     *,
     task: str,
+    backend_request_id: str | None = None,
     orchestrator_name: str = DEFAULT_ORCHESTRATOR_NAME,
     planner_name: str = DEFAULT_PLANNER_NAME,
     medior_name: str = DEFAULT_MEDIOR_NAME,
 ) -> str:
-    """Build the kickoff message that mentions only the orchestrator."""
+    """Build the kickoff message that mentions only the orchestrator.
+
+    Args:
+        task: User research task to investigate.
+        backend_request_id: Optional backend long-running request ID. When
+            present, the orchestrator must use it as `request_id` when sending
+            the final answer back to the backend.
+        orchestrator_name: Agent name to mention in the kickoff.
+        planner_name: Agent name that should decompose the task.
+        medior_name: Agent name expected to return the synthesis.
+    """
+
+    normalized_backend_request_id = (backend_request_id or "").strip()
+    backend_request_text = ""
+    if normalized_backend_request_id:
+        backend_request_text = f"""
+
+        Backend request ID:
+        {normalized_backend_request_id}
+
+        When the final answer is ready, call send_final_answer_to_backend with
+        this value as request_id.
+        """
+
     return cleandoc(
         f"""
         @{orchestrator_name} please coordinate this research task.
 
         Original task:
         {task}
+        {backend_request_text}
 
         Pass this task to {planner_name} for decomposition. Expect the answer
         from {medior_name}
@@ -267,6 +292,7 @@ async def setup_research_room(
         room_id=room.id,
         content=build_research_room_kickoff_message(
             task=normalized_task,
+            backend_request_id=task_id,
             orchestrator_name=orchestrator_name,
             planner_name=planner_name,
             medior_name=medior_name,

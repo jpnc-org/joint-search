@@ -241,6 +241,10 @@ def test_setup_research_room_creates_room_adds_agents_and_sends_kickoff() -> Non
         assert "Investigate the market." in calls[6]["content"]
         assert "research_planner" in calls[6]["content"]
         assert "medior" in calls[6]["content"]
+        assert "Backend request ID:" in calls[6]["content"]
+        assert "task-id" in calls[6]["content"]
+        assert "request_id" in calls[6]["content"]
+        assert "send_final_answer_to_backend" in calls[6]["content"]
         assert "Expect the answer" in calls[6]["content"]
 
     asyncio.run(scenario())
