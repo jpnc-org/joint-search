@@ -1,4 +1,5 @@
 import { FileText, Layers } from "lucide-react";
+import { Easing, interpolate, useCurrentFrame } from "remotion";
 import { Button } from "../components/ui/button";
 import {
   GlassCard,
@@ -12,8 +13,20 @@ import {
 } from "performative-ui";
 
 export default function LandingScene() {
+  const frame = useCurrentFrame();
+  const scrollY = interpolate(
+    frame,
+    [15, 260],
+    [0, 900],
+    {
+      easing: Easing.inOut(Easing.cubic),
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
+
   return (
-    <div className="relative h-screen w-full overflow-y-auto overflow-x-hidden bg-background">
+    <div className="relative h-screen w-full overflow-hidden bg-background">
       <NodeGraphBackground
         className="pointer-events-none absolute inset-0 h-full w-full"
         density={50}
@@ -27,23 +40,26 @@ export default function LandingScene() {
         durationS={[12, 24]}
       />
 
-      <div className="relative z-10 flex min-h-screen flex-col">
-        <nav className="sticky top-0 z-20 flex w-full items-center justify-between border-b border-border/40 bg-background/80 px-6 py-5 backdrop-blur-md">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              <Sparkle /> DeepResearch
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="cursor-pointer">
-                Sign in
-              </Button>
-              <Button size="sm" className="cursor-pointer">
-                Get started
-              </Button>
-            </div>
+      <nav className="absolute top-0 z-20 flex w-full items-center justify-between border-b border-border/40 bg-background/80 px-6 py-5 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <Sparkle /> DeepResearch
           </div>
-        </nav>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="cursor-pointer">
+              Sign in
+            </Button>
+            <Button size="sm" className="cursor-pointer">
+              Get started
+            </Button>
+          </div>
+        </div>
+      </nav>
 
+      <div
+        className="relative z-10 flex min-h-screen flex-col pt-[78px]"
+        style={{ transform: `translateY(-${scrollY}px)` }}
+      >
         <section className="flex w-full flex-1 flex-col items-center justify-center px-6 pt-20 pb-16 text-center">
           <h1 className="flex flex-wrap items-baseline justify-center gap-x-3 pb-4 leading-[1.5] text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             <span>Stop guessing.</span>
