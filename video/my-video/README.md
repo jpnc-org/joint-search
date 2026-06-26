@@ -1,54 +1,90 @@
-# Remotion video
+# JointSearch Remotion Video
 
-<p align="center">
-  <a href="https://github.com/remotion-dev/logo">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/remotion-dev/logo/raw/main/animated-logo-banner-dark.apng">
-      <img alt="Animated Remotion Logo" src="https://github.com/remotion-dev/logo/raw/main/animated-logo-banner-light.gif">
-    </picture>
-  </a>
-</p>
+This package contains the `DeepResearchDemo` Remotion composition for the
+JointSearch product walkthrough.
 
-Welcome to your Remotion project!
+The video is code-rendered with React, Remotion, Tailwind, lucide icons, and a
+small set of local UI components. It currently has no audio track; script text is
+stored under `public/scripts/`.
+
+## Composition
+
+```mermaid
+flowchart LR
+  intro["Intro<br/>LLMs can get research wrong"] --> landing["Landing page"]
+  landing --> login["Login"]
+  login --> query["User enters query<br/>thinking starts"]
+  query --> architecture["Architecture<br/>orchestrator, planner, researchers, medior"]
+  architecture --> crosscheck["Band.ai collaboration<br/>researchers cross-check"]
+  crosscheck --> synthesis["Synthesis"]
+  synthesis --> answer["Final chat answer"]
+  answer --> final["JointSearch star close"]
+```
+
+## Timeline
+
+```mermaid
+gantt
+  title DeepResearchDemo timeline at 30fps
+  dateFormat X
+  axisFormat %s
+  section Scenes
+  Intro                 :0, 450
+  Landing               :450, 270
+  Login                 :720, 150
+  Query and thinking    :870, 240
+  Architecture          :1110, 570
+  Cross-check           :1680, 360
+  Synthesis             :2040, 330
+  Answer                :2370, 210
+  Final                 :2580, 180
+```
+
+## Important Files
+
+| File                                     | Purpose                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| `src/Root.tsx`                           | Registers the `DeepResearchDemo` composition at `1920x1080`, `30fps` |
+| `src/Composition.tsx`                    | Scene ordering, durations, shared scene transition                   |
+| `src/components/NodeGraphBackground.tsx` | Animated graph background used across scenes                         |
+| `src/scenes/*.tsx`                       | Individual scenes                                                    |
+| `public/scripts/*.md`                    | Per-scene voiceover/script text                                      |
 
 ## Commands
 
-**Install Dependencies**
+Install dependencies:
 
-```console
-npm i
+```bash
+npm install
 ```
 
-**Start Preview**
+Start Remotion Studio:
 
-```console
+```bash
 npm run dev
 ```
 
-**Render video**
+Open:
 
-```console
-npx remotion render
+```text
+http://localhost:3000/DeepResearchDemo
 ```
 
-**Upgrade Remotion**
+Render the video:
 
-```console
-npx remotion upgrade
+```bash
+npx remotion render DeepResearchDemo
 ```
 
-## Docs
+Run checks:
 
-Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
+```bash
+npm run lint
+```
 
-## Help
+## Notes
 
-We provide help on our [Discord server](https://discord.gg/6VzzNDwUwV).
-
-## Issues
-
-Found an issue with Remotion? [File an issue here](https://github.com/remotion-dev/remotion/issues/new).
-
-## License
-
-Note that for some entities a company license is needed. [Read the terms here](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md).
+- Remotion Studio may show the preview scaled down in `Fit` mode. The rendered
+  composition remains `1920x1080`.
+- The public voiceover audio has been removed. Add audio explicitly in
+  `src/Composition.tsx` if a generated voiceover is needed again.
